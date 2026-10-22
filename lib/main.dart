@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/materia_provider.dart';
-// TODO(integración): descomenta estas dos líneas cuando tengas los providers de Kinberly.
 // import 'providers/tarea_provider.dart';
 // import 'providers/vinculo_provider.dart';
 import 'screens/splash_screen.dart';
@@ -20,7 +19,6 @@ class StudyPlanApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => MateriaProvider()),
-        // TODO(integración): descomenta cuando existan los providers de Kinberly.
         // ChangeNotifierProvider(create: (_) => TareaProvider()),
         // ChangeNotifierProvider(create: (_) => VinculoProvider()),
       ],

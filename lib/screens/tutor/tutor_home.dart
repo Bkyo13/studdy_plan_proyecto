@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
 
-// TEMPORAL: reemplaza este archivo por el TutorHome real de Kinberly.
 class TutorHome extends StatelessWidget {
   const TutorHome({super.key});
 

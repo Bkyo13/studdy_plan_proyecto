@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
 
-// TEMPORAL: reemplaza este archivo por el EstudianteHome real de Kinberly.
 class EstudianteHome extends StatelessWidget {
   const EstudianteHome({super.key});
 
