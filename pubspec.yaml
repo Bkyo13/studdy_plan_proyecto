@@ -1,4 +1,19 @@
+name: studyplan
+description: StudyPlan, organizador de tareas escolares.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+
 dependencies:
   flutter:
     sdk: flutter
   provider: ^6.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
