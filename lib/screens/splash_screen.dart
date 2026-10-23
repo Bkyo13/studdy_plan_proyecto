@@ -5,7 +5,7 @@ import '../widgets/logo_app.dart';
 import 'auth_gate.dart';
 
 /// Pantalla de carga inicial. Después de 2.5 segundos pasa al login (o al
-/// dashboard si ya hay sesión).
+/// dashboard si ya hay sesión) con una transición suave.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 

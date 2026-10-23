@@ -3,8 +3,8 @@ import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/materia_provider.dart';
-// import 'providers/tarea_provider.dart';
-// import 'providers/vinculo_provider.dart';
+import 'providers/tarea_provider.dart';
+import 'providers/vinculo_provider.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
 
@@ -19,8 +19,8 @@ class StudyPlanApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => MateriaProvider()),
-        // ChangeNotifierProvider(create: (_) => TareaProvider()),
-        // ChangeNotifierProvider(create: (_) => VinculoProvider()),
+        ChangeNotifierProvider(create: (_) => TareaProvider()),
+        ChangeNotifierProvider(create: (_) => VinculoProvider()),
       ],
       child: MaterialApp(
         title: 'StudyPlan',

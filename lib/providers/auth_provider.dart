@@ -14,14 +14,14 @@ class AuthProvider extends ChangeNotifier {
     ),
     const Usuario(
       id: 2,
-      nombre: 'Carolina Herrera',
+      nombre: 'Carmen Torres',
       correo: 'tutor@demo.com',
       contrasena: '123456',
       rol: Rol.tutor,
     ),
     const Usuario(
       id: 3,
-      nombre: 'ADMIN',
+      nombre: 'Administrador',
       correo: 'admin@demo.com',
       contrasena: '123456',
       rol: Rol.administrador,
@@ -79,6 +79,13 @@ class AuthProvider extends ChangeNotifier {
   void cerrarSesion() {
     _usuarioActual = null;
     notifyListeners();
+  }
+
+  Usuario? porId(int id) {
+    for (final u in _usuarios) {
+      if (u.id == id) return u;
+    }
+    return null;
   }
 
   /// Lo usa el tutor para vincular a un estudiante por correo.
