@@ -88,26 +88,26 @@ lib/
 
 ## 5. Screenshots
 ### Splashscreen
-![Splash]
+![Splash](screenshots/01-splash.png)
 
 ### Autenticación
-![Login con validación]
-![Registro con selección de rol]
+![Login con validación](screenshots/02-login.png)
+![Registro con selección de rol](screenshots/03-registro.png)
 
 ### Dashboards
-![Dashboard Administrador]
-![Dashboard Estudiante]
-![Dashboard Tutor]
+![Dashboard Administrador](screenshots/04-dashboard-admin.png)
+![Dashboard Estudiante](screenshots/06-dashboard-alum.png)
+![Dashboard Tutor](screenshots/05-dashboard-tutor.png)
 
 ### Listas
-![Lista principal: tareas]
-![Lista secundaria: materias]
-![Estado vacío]
+![Lista principal: tareas](screenshots/07-lista-principal.png)
+![Lista secundaria: materias](screenshots/08-lista-detalle.png)
+![Estado vacío](screenshots/09-lista-vacia.png)
 
 ### Formularios
-![Formulario del Estudiante: nueva tarea]
-![Formulario del Tutor: vincular estudiante]
-![Formulario del Administrador: nueva materia]
+![Formulario del Administrador: nueva materia](screenshots/10-formulario.png)
+
+![Formulario del Administrador: materia agregada](screenshots/11-formulario.png)
 
 ### Evidencia funcional
 ![Foto del equipo con la app corriendo]
