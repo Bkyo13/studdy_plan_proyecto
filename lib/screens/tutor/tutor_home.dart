@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/tarea.dart';
 import '../../models/usuario.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/tarea_provider.dart';

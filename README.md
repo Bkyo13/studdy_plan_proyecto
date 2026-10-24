@@ -110,5 +110,10 @@ lib/
 ![Formulario del Administrador: materia agregada](screenshots/11-formulario.png)
 
 ### Evidencia funcional
-![Foto del equipo con la app corriendo]
-![Flujo de navegación]
+![Foto del equipo con la app corriendo](screenshots/011_foto_equipo.JPG)
+![Flujo de navegación](screenshots/012_flujo.JPG) 
+![Flujo de navegación](screenshots/013_flujo.JPG) 
+![Flujo de navegación](screenshots/014_flujo.JPG)
+![Flujo de navegación](screenshots/015_flujo.JPG)
+![Flujo de navegación](screenshots/016_flujo.JPG)
+![Flujo de navegación](screenshots/017_flujo.JPG)
