@@ -6,6 +6,7 @@ import '../theme/app_theme.dart';
 import '../utils/mensajes.dart';
 import '../utils/validadores.dart';
 import '../widgets/logo_app.dart';
+import 'recuperar_contrasena_screen.dart';
 import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -44,6 +45,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _proximamente(String funcion) {
     mostrarMensaje(context, '$funcion estará disponible en una próxima versión');
+  }
+
+  void _irARecuperar() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => RecuperarContrasenaScreen(correoInicial: _correoCtrl.text),
+      ),
+    );
   }
 
   void _irARegistro() {
@@ -176,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         Flexible(
           child: TextButton(
-            onPressed: () => _proximamente('Recuperar la contraseña'),
+            onPressed: _irARecuperar,
             child: const Text(
               '¿Olvidaste tu contraseña?',
               maxLines: 1,

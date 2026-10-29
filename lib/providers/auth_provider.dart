@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/sesion.dart';
+import '../models/token_recuperacion.dart';
 import '../models/usuario.dart';
 
 /// Maneja la sesión y los usuarios (en memoria, solo para la demo).
@@ -45,6 +46,11 @@ class AuthProvider extends ChangeNotifier {
   Usuario? _usuarioActual;
   Sesion? _sesion;
   int _siguienteId = 4;
+
+  // Recuperación de contraseña
+  static const _duracionCodigo = Duration(minutes: 10);
+  final List<TokenRecuperacion> _tokensRecuperacion = [];
+  int _siguienteTokenId = 1;
 
   Usuario? get usuarioActual => _usuarioActual;
 
@@ -213,6 +219,83 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     _borrarSesionGuardada();
     debugPrint('[Sesion] Sesión cerrada y token eliminado.');
+  }
+
+  // ---------------------------------------------------------------------
+  // Recuperación de contraseña
+  // ---------------------------------------------------------------------
+
+  Usuario? _buscarPorCorreo(String correo) {
+    final buscado = correo.trim().toLowerCase();
+    for (final u in _usuarios) {
+      if (u.correo.toLowerCase() == buscado) return u;
+    }
+    return null;
+  }
+
+  /// Genera un código de 6 dígitos para la cuenta con ese correo y lo devuelve.
+  /// Devuelve null si no existe una cuenta con ese correo.
+  /// (En una app real el código se enviaría por correo; en esta demo se
+  /// muestra en pantalla.)
+  String? solicitarRecuperacion(String correo) {
+    final usuario = _buscarPorCorreo(correo);
+    if (usuario == null) {
+      debugPrint('[Recuperacion] No existe una cuenta con el correo $correo.');
+      return null;
+    }
+    // Los códigos anteriores de esa cuenta dejan de servir.
+    for (final t in _tokensRecuperacion) {
+      if (t.usuarioId == usuario.id) t.usado = true;
+    }
+    final codigo = (Random.secure().nextInt(900000) + 100000).toString();
+    _tokensRecuperacion.add(
+      TokenRecuperacion(
+        id: _siguienteTokenId++,
+        token: codigo,
+        usuarioId: usuario.id,
+        fechaExpiracion: DateTime.now().add(_duracionCodigo),
+      ),
+    );
+    debugPrint('[Recuperacion] Código generado para ${usuario.correo}; vence en 10 minutos.');
+    return codigo;
+  }
+
+  /// Cambia la contraseña si el código es correcto, no se ha usado y no ha
+  /// vencido. Devuelve null si salió bien, o el mensaje de error.
+  String? restablecerContrasena({
+    required String correo,
+    required String codigo,
+    required String nuevaContrasena,
+  }) {
+    final usuario = _buscarPorCorreo(correo);
+    if (usuario == null) {
+      return 'No existe una cuenta con ese correo';
+    }
+
+    TokenRecuperacion? token;
+    for (final t in _tokensRecuperacion) {
+      if (t.usuarioId == usuario.id && t.token == codigo.trim()) {
+        token = t;
+      }
+    }
+    if (token == null) return 'El código no es correcto';
+    if (token.usado) return 'Ese código ya no sirve. Solicita uno nuevo';
+    if (!token.vigente) return 'El código venció. Solicita uno nuevo';
+
+    final i = _usuarios.indexWhere((u) => u.id == usuario.id);
+    final actualizado = Usuario(
+      id: usuario.id,
+      nombre: usuario.nombre,
+      correo: usuario.correo,
+      contrasena: nuevaContrasena,
+      rol: usuario.rol,
+    );
+    _usuarios[i] = actualizado;
+    if (_usuarioActual?.id == usuario.id) _usuarioActual = actualizado;
+    token.usado = true;
+    notifyListeners();
+    debugPrint('[Recuperacion] Contraseña actualizada para ${usuario.correo}.');
+    return null;
   }
 
   Usuario? porId(int id) {
