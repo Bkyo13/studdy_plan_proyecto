@@ -1,0 +1,103 @@
+@startuml Studdyplan
+
+
+class Usuario {
+    +id : int
+    +nombre : String[50]
+    +correo : String[100]
+    +contrasena : String[60]
+    +proveedor : String[10]
+    +rol : Rol
+}
+
+class Sesion <<ampliacion>> {
+    +id : int
+    +token : String[255]
+    +fechaCreacion : DateTime
+    +fechaExpiracion : DateTime
+}
+
+class TokenRecuperacion <<ampliacion>> {
+    +id : int
+    +token : String[64]
+    +fechaExpiracion : DateTime
+    +usado : bool
+}
+
+class Materia {
+    +id : int
+    +nombre : String[60]
+    +color : String[7]
+}
+
+class Tarea {
+    +id : int
+    +nombre : String[100]
+    +descripcion : String[500]
+    +fechaEntrega : DateTime
+    +fechaCompletada : DateTime?
+    +prioridad : Prioridad
+    +estado : Estado
+}
+
+class Vinculo {
+    +tutorId : int
+    +estudianteId : int
+}
+
+class RegistroXP <<ampliacion>> {
+    +id : int
+    +puntos : int
+    +motivo : String[60]
+    +fecha : DateTime
+}
+
+class Logro <<ampliacion>> {
+    +id : int
+    +nombre : String[60]
+    +descripcion : String[150]
+    +xpRequerido : int
+}
+
+class EstudianteLogro <<ampliacion>> {
+    +id : int
+    +fechaObtenido : DateTime
+}
+
+enum Rol {
+    ESTUDIANTE
+    ADMINISTRADOR
+    TUTOR
+}
+
+enum Prioridad {
+    ALTA
+    MEDIA
+    BAJA
+}
+
+enum Estado {
+    PENDIENTE
+    COMPLETADA
+}
+
+Usuario "1" --> "0..*" Sesion : abre
+Usuario "1" --> "0..*" TokenRecuperacion : solicita
+Usuario "1" --> "0..*" Materia : cursa
+Usuario "1" --> "0..*" Tarea : es dueño de
+Usuario "1" --> "0..*" RegistroXP : acumula
+Usuario "1" --> "0..*" EstudianteLogro : obtiene
+Logro "1" --> "0..*" EstudianteLogro : se otorga en
+Materia "1" --> "0..*" Tarea : clasifica
+RegistroXP "0..*" --> "0..1" Tarea : se origina en
+Vinculo "0..1" --> "1" Usuario : tutor
+Vinculo "0..*" --> "1" Usuario : estudiante
+Usuario --> Rol
+Tarea --> Prioridad
+Tarea --> Estado
+
+note bottom of Vinculo
+    tutorId es un Usuario con rol TUTOR y
+    estudianteId es un Usuario con rol ESTUDIANTE.
+end note
+@enduml

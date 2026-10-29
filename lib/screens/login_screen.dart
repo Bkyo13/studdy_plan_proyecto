@@ -31,9 +31,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _iniciarSesion() {
     if (!_formKey.currentState!.validate()) return;
-    final error = context
-        .read<AuthProvider>()
-        .iniciarSesion(_correoCtrl.text, _passwordCtrl.text);
+    final error = context.read<AuthProvider>().iniciarSesion(
+          _correoCtrl.text,
+          _passwordCtrl.text,
+          recordarme: _recordarme,
+        );
     if (error != null) {
       mostrarMensaje(context, error, error: true);
     }
