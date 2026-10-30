@@ -3,13 +3,15 @@ import 'package:provider/provider.dart';
 
 import '../../models/usuario.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/logro_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/boton_circular.dart';
+import 'logros_admin_screen.dart';
 import 'materia_form_screen.dart';
 import 'materias_screen.dart';
 
-/// Dashboard del Administrador: resumen de usuarios y materias.
+/// Dashboard del Administrador: resumen de usuarios, materias y logros.
 class AdminHome extends StatelessWidget {
   const AdminHome({super.key});
 
@@ -17,6 +19,7 @@ class AdminHome extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final totalMaterias = context.watch<MateriaProvider>().materias.length;
+    final totalLogros = context.watch<LogroProvider>().logros.length;
     final usuarios = auth.usuarios;
     final nombre = auth.usuarioActual?.nombre ?? '';
 
@@ -50,7 +53,7 @@ class AdminHome extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                '¡Hola, $nombre! Gestiona las materias de StudyPlan.',
+                '¡Hola, $nombre! Gestiona las materias y los logros de StudyPlan.',
                 style: AppText.cuerpo,
               ),
               const SizedBox(height: AppSpacing.entreSecciones),
@@ -72,6 +75,12 @@ class AdminHome extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+              const SizedBox(height: AppSpacing.entreTarjetas),
+              _tarjetaDato(
+                icono: Icons.emoji_events_outlined,
+                valor: totalLogros,
+                etiqueta: 'Logros en el catálogo',
               ),
               const SizedBox(height: 12),
               Text(
@@ -99,6 +108,18 @@ class AdminHome extends StatelessWidget {
                 icon: const Icon(Icons.add),
                 label: const Text(
                   'Nueva materia',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const LogrosAdminScreen()),
+                ),
+                style: AppDecor.botonSecundario(),
+                icon: const Icon(Icons.emoji_events_outlined),
+                label: const Text(
+                  'Administrar logros',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),

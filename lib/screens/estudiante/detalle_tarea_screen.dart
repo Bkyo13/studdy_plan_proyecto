@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/tarea.dart';
+import '../../providers/logro_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
@@ -49,9 +50,66 @@ class DetalleTareaScreen extends StatelessWidget {
     provider.eliminar(tarea.id);
   }
 
-  void _completar(BuildContext context, Tarea tarea) {
-    context.read<TareaProvider>().completar(tarea.id);
+  Future<void> _completar(BuildContext context, Tarea tarea) async {
+    final tareas = context.read<TareaProvider>();
+    final logros = context.read<LogroProvider>();
+
+    tareas.completar(tarea.id);
+    final nuevos = logros.evaluar(
+      tarea.estudianteId,
+      tareas.xpDe(tarea.estudianteId),
+    );
     mostrarMensaje(context, '¡Tarea completada! +${TareaProvider.xpPorTarea} XP');
+
+    // Aviso al desbloquear uno o más logros.
+    if (nuevos.isNotEmpty && context.mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Column(
+            children: [
+              const Icon(Icons.emoji_events_outlined, size: 48, color: AppColors.verde),
+              const SizedBox(height: 8),
+              Text(
+                nuevos.length == 1 ? '¡Logro desbloqueado!' : '¡Logros desbloqueados!',
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final l in nuevos)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Column(
+                    children: [
+                      Text(
+                        l.nombre,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+                      ),
+                      Text(l.descripcion, textAlign: TextAlign.center, style: AppText.pequeno),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text(
+                'Genial',
+                style: TextStyle(color: AppColors.verde, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (!context.mounted) return;
     Navigator.of(context).pop();
   }
 

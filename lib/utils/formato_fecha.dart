@@ -56,3 +56,23 @@ String formatoCompletado(DateTime fecha) {
   if (atras <= 6) return 'Hace $atras días';
   return '${_meses[fecha.month - 1]} ${fecha.day}';
 }
+
+const _mesesLargos = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+];
+
+/// "29 de octubre de 2026, 13:05".
+String formatoFechaLarga(DateTime fecha) {
+  return '${fecha.day} de ${_mesesLargos[fecha.month - 1]} de ${fecha.year}, ${_hora(fecha)}';
+}
