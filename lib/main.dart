@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
+import 'providers/logro_provider.dart';
 import 'providers/materia_provider.dart';
 import 'providers/tarea_provider.dart';
 import 'providers/vinculo_provider.dart';
@@ -21,6 +22,7 @@ class StudyPlanApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MateriaProvider()),
         ChangeNotifierProvider(create: (_) => TareaProvider()),
         ChangeNotifierProvider(create: (_) => VinculoProvider()),
+        ChangeNotifierProvider(create: (_) => LogroProvider()),
       ],
       child: MaterialApp(
         title: 'StudyPlan',
