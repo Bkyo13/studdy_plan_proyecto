@@ -18,6 +18,7 @@ class AuthProvider extends ChangeNotifier {
   static const _claveCreada = 'sesion_creada';
   static const _claveExpira = 'sesion_expira';
   static const _duracionSesion = Duration(days: 7);
+  static const _duracionCodigo = Duration(minutes: 10);
 
   final List<Usuario> _usuarios = [
     const Usuario(
@@ -43,19 +44,21 @@ class AuthProvider extends ChangeNotifier {
     ),
   ];
 
+  final List<TokenRecuperacion> _tokensRecuperacion = [];
+
   Usuario? _usuarioActual;
   Sesion? _sesion;
+  bool _sesionRecordada = false;
   int _siguienteId = 4;
-
-  // Recuperación de contraseña
-  static const _duracionCodigo = Duration(minutes: 10);
-  final List<TokenRecuperacion> _tokensRecuperacion = [];
   int _siguienteTokenId = 1;
 
   Usuario? get usuarioActual => _usuarioActual;
 
   /// Sesión activa (con su token), o null si no hay.
   Sesion? get sesion => _sesion;
+
+  /// Si el token de la sesión está guardado en el dispositivo.
+  bool get sesionRecordada => _sesionRecordada;
 
   List<Usuario> get usuarios => List.unmodifiable(_usuarios);
 
@@ -66,6 +69,16 @@ class AuthProvider extends ChangeNotifier {
   String _generarToken() {
     final azar = Random.secure();
     return List.generate(32, (_) => azar.nextInt(16).toRadixString(16)).join();
+  }
+
+  Sesion _nuevaSesion(int usuarioId) {
+    final ahora = DateTime.now();
+    return Sesion(
+      token: _generarToken(),
+      usuarioId: usuarioId,
+      fechaCreacion: ahora,
+      fechaExpiracion: ahora.add(_duracionSesion),
+    );
   }
 
   /// Verifica si existe una sesión activa y válida mediante el token guardado.
@@ -105,6 +118,7 @@ class AuthProvider extends ChangeNotifier {
 
       _sesion = sesion;
       _usuarioActual = usuario;
+      _sesionRecordada = true;
       notifyListeners();
       debugPrint(
         '[Sesion] Token válido (${token.substring(0, 8)}…) para ${usuario.correo}. '
@@ -143,6 +157,18 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Ajuste "Mantener sesión iniciada": guarda o borra el token del dispositivo.
+  void cambiarRecordarSesion(bool recordar) {
+    _sesionRecordada = recordar;
+    final sesion = _sesion;
+    if (recordar && sesion != null) {
+      _guardarSesion(sesion);
+    } else {
+      _borrarSesionGuardada();
+    }
+    notifyListeners();
+  }
+
   // ---------------------------------------------------------------------
   // Inicio de sesión, registro y cierre
   // ---------------------------------------------------------------------
@@ -161,13 +187,8 @@ class AuthProvider extends ChangeNotifier {
           return 'Contraseña incorrecta';
         }
         _usuarioActual = u;
-        final ahora = DateTime.now();
-        _sesion = Sesion(
-          token: _generarToken(),
-          usuarioId: u.id,
-          fechaCreacion: ahora,
-          fechaExpiracion: ahora.add(_duracionSesion),
-        );
+        _sesion = _nuevaSesion(u.id);
+        _sesionRecordada = recordarme;
         if (recordarme) {
           _guardarSesion(_sesion!);
         } else {
@@ -201,13 +222,8 @@ class AuthProvider extends ChangeNotifier {
     );
     _usuarios.add(nuevo);
     _usuarioActual = nuevo;
-    final ahora = DateTime.now();
-    _sesion = Sesion(
-      token: _generarToken(),
-      usuarioId: nuevo.id,
-      fechaCreacion: ahora,
-      fechaExpiracion: ahora.add(_duracionSesion),
-    );
+    _sesion = _nuevaSesion(nuevo.id);
+    _sesionRecordada = false;
     _borrarSesionGuardada();
     notifyListeners();
     return null;
@@ -216,9 +232,71 @@ class AuthProvider extends ChangeNotifier {
   void cerrarSesion() {
     _usuarioActual = null;
     _sesion = null;
+    _sesionRecordada = false;
     notifyListeners();
     _borrarSesionGuardada();
     debugPrint('[Sesion] Sesión cerrada y token eliminado.');
+  }
+
+  // ---------------------------------------------------------------------
+  // Perfil
+  // ---------------------------------------------------------------------
+
+  void _reemplazarUsuario(Usuario nuevo) {
+    final i = _usuarios.indexWhere((u) => u.id == nuevo.id);
+    if (i != -1) _usuarios[i] = nuevo;
+    if (_usuarioActual?.id == nuevo.id) _usuarioActual = nuevo;
+    notifyListeners();
+  }
+
+  /// ¿La contraseña escrita es la de la cuenta con sesión abierta?
+  bool contrasenaCorrecta(String contrasena) {
+    return _usuarioActual != null && _usuarioActual!.contrasena == contrasena;
+  }
+
+  /// Cambia nombre y correo de la cuenta actual. Devuelve null si salió bien,
+  /// o el mensaje de error (por ejemplo, si el correo ya lo usa otra cuenta).
+  String? actualizarPerfil({required String nombre, required String correo}) {
+    final actual = _usuarioActual;
+    if (actual == null) return 'No hay una sesión activa';
+    final correoLimpio = correo.trim().toLowerCase();
+    final repetido = _usuarios.any(
+      (u) => u.id != actual.id && u.correo.toLowerCase() == correoLimpio,
+    );
+    if (repetido) return 'Ya existe una cuenta con ese correo';
+    _reemplazarUsuario(
+      actual.copyWith(nombre: nombre.trim(), correo: correoLimpio),
+    );
+    return null;
+  }
+
+  /// Cambia la contraseña de la cuenta actual (solo cuentas de acceso local).
+  /// Devuelve null si salió bien, o el mensaje de error.
+  String? cambiarContrasena({required String actual, required String nueva}) {
+    final usuario = _usuarioActual;
+    if (usuario == null) return 'No hay una sesión activa';
+    if (!usuario.accesoLocal) return 'Esta cuenta no usa contraseña';
+    if (usuario.contrasena != actual) {
+      return 'La contraseña actual no es correcta';
+    }
+    _reemplazarUsuario(usuario.copyWith(contrasena: nueva));
+    debugPrint('[Cuenta] Contraseña actualizada para ${usuario.correo}.');
+    return null;
+  }
+
+  /// Elimina la cuenta actual y cierra la sesión. Los datos del estudiante
+  /// (tareas, logros, vínculos) los borra quien llama a este método.
+  void eliminarCuenta() {
+    final usuario = _usuarioActual;
+    if (usuario == null) return;
+    _usuarios.removeWhere((u) => u.id == usuario.id);
+    _tokensRecuperacion.removeWhere((t) => t.usuarioId == usuario.id);
+    _usuarioActual = null;
+    _sesion = null;
+    _sesionRecordada = false;
+    notifyListeners();
+    _borrarSesionGuardada();
+    debugPrint('[Cuenta] Cuenta eliminada: ${usuario.correo}.');
   }
 
   // ---------------------------------------------------------------------
@@ -282,21 +360,15 @@ class AuthProvider extends ChangeNotifier {
     if (token.usado) return 'Ese código ya no sirve. Solicita uno nuevo';
     if (!token.vigente) return 'El código venció. Solicita uno nuevo';
 
-    final i = _usuarios.indexWhere((u) => u.id == usuario.id);
-    final actualizado = Usuario(
-      id: usuario.id,
-      nombre: usuario.nombre,
-      correo: usuario.correo,
-      contrasena: nuevaContrasena,
-      rol: usuario.rol,
-    );
-    _usuarios[i] = actualizado;
-    if (_usuarioActual?.id == usuario.id) _usuarioActual = actualizado;
     token.usado = true;
-    notifyListeners();
+    _reemplazarUsuario(usuario.copyWith(contrasena: nuevaContrasena));
     debugPrint('[Recuperacion] Contraseña actualizada para ${usuario.correo}.');
     return null;
   }
+
+  // ---------------------------------------------------------------------
+  // Consultas
+  // ---------------------------------------------------------------------
 
   Usuario? porId(int id) {
     for (final u in _usuarios) {

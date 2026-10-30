@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_tarea.dart';
 import 'detalle_tarea_screen.dart';
+import 'perfil_screen.dart';
 
 /// Pestaña Inicio: saludo y tareas pendientes (lista principal de la entrega).
 class InicioScreen extends StatefulWidget {
@@ -63,15 +64,11 @@ class _InicioScreenState extends State<InicioScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              PopupMenuButton<String>(
-                tooltip: 'Cuenta',
-                onSelected: (_) => context.read<AuthProvider>().cerrarSesion(),
-                itemBuilder: (_) => const [
-                  PopupMenuItem<String>(
-                    value: 'salir',
-                    child: Text('Cerrar sesión'),
-                  ),
-                ],
+              InkWell(
+                customBorder: const CircleBorder(),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const PerfilScreen()),
+                ),
                 child: CircleAvatar(
                   radius: 28,
                   backgroundColor: AppColors.verdeClaro,

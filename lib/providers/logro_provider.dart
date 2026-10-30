@@ -105,6 +105,12 @@ class LogroProvider extends ChangeNotifier {
   // Desbloqueo
   // -------------------------------------------------------------------
 
+  /// Borra los logros obtenidos por un estudiante (al eliminar su cuenta).
+  void eliminarDeEstudiante(int estudianteId) {
+    _obtenidos.removeWhere((o) => o.estudianteId == estudianteId);
+    notifyListeners();
+  }
+
   /// Desbloquea los logros cuyo XP requerido ya se alcanzó y devuelve los que
   /// se desbloquearon en este momento (para avisarle al estudiante).
   List<Logro> evaluar(int estudianteId, int xp) {

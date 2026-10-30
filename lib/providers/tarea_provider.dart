@@ -191,6 +191,12 @@ class TareaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Borra todas las tareas de un estudiante (al eliminar su cuenta).
+  void eliminarDeEstudiante(int estudianteId) {
+    _tareas.removeWhere((t) => t.estudianteId == estudianteId);
+    notifyListeners();
+  }
+
   void eliminar(int id) {
     _tareas.removeWhere((t) => t.id == id);
     notifyListeners();

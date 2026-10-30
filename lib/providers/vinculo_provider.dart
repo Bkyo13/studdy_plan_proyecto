@@ -21,6 +21,12 @@ class VinculoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Quita los vínculos de tutores con un estudiante (al eliminar su cuenta).
+  void eliminarDeEstudiante(int estudianteId) {
+    _vinculos.removeWhere((v) => v.estudianteId == estudianteId);
+    notifyListeners();
+  }
+
   void desvincular(int tutorId) {
     _vinculos.removeWhere((v) => v.tutorId == tutorId);
     notifyListeners();
