@@ -8,11 +8,15 @@ class TarjetaDato extends StatelessWidget {
   final String valor;
   final String etiqueta;
 
+  /// Si es true, el ícono va en rojo suave (por ejemplo, tareas atrasadas).
+  final bool alerta;
+
   const TarjetaDato({
     super.key,
     required this.icono,
     required this.valor,
     required this.etiqueta,
+    this.alerta = false,
   });
 
   @override
@@ -26,11 +30,14 @@ class TarjetaDato extends StatelessWidget {
           Container(
             width: 44,
             height: 44,
-            decoration: const BoxDecoration(
-              color: AppColors.verdeClaro,
+            decoration: BoxDecoration(
+              color: alerta ? const Color(0xFFF6E9E7) : AppColors.verdeClaro,
               shape: BoxShape.circle,
             ),
-            child: Icon(icono, color: AppColors.verde),
+            child: Icon(
+              icono,
+              color: alerta ? AppColors.peligro : AppColors.verde,
+            ),
           ),
           const SizedBox(height: 16),
           Text(

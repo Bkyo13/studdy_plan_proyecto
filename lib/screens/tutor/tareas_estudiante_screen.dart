@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_tarea.dart';
+import '../estudiante/detalle_tarea_screen.dart';
 
 /// Lista de tareas del estudiante vinculado. Solo lectura, con filtro.
 class TareasEstudianteScreen extends StatefulWidget {
@@ -91,6 +92,14 @@ class _TareasEstudianteScreenState extends State<TareasEstudianteScreen> {
                           return TarjetaTarea(
                             tarea: tarea,
                             materia: materias.porId(tarea.materiaId),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => DetalleTareaScreen(
+                                  tareaId: tarea.id,
+                                  soloLectura: true,
+                                ),
+                              ),
+                            ),
                           );
                         },
                       ),

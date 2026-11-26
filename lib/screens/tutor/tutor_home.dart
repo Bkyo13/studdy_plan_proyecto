@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/tarea.dart';
 import '../../models/usuario.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/vinculo_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_dato.dart';
@@ -15,6 +17,40 @@ import 'vincular_estudiante_screen.dart';
 /// Dashboard del Tutor: resumen del estudiante vinculado (solo lectura).
 class TutorHome extends StatelessWidget {
   const TutorHome({super.key});
+
+  Future<void> _confirmarDesvincular(
+    BuildContext context,
+    Usuario estudiante,
+  ) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Desvincular estudiante'),
+        content: Text(
+          'Dejarás de ver las tareas y el avance de ${estudiante.nombre}. '
+          'Podrás volver a vincularlo cuando quieras.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Desvincular',
+              style: TextStyle(color: AppColors.peligro, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !context.mounted) return;
+    final tutor = context.read<AuthProvider>().usuarioActual;
+    if (tutor == null) return;
+    context.read<VinculoProvider>().desvincular(tutor.id);
+    mostrarMensaje(context, 'Estudiante desvinculado');
+  }
 
   void _irAVincular(BuildContext context) {
     Navigator.of(context).push(
@@ -83,6 +119,7 @@ class TutorHome extends StatelessWidget {
   List<Widget> _resumen(BuildContext context, Usuario estudiante) {
     final tareas = context.watch<TareaProvider>();
     final pendientes = tareas.contarPorEstado(estudiante.id, Estado.pendiente);
+    final atrasadas = tareas.contarVencidas(estudiante.id);
     final completadas = tareas.contarPorEstado(estudiante.id, Estado.completada);
     final xp = tareas.xpDe(estudiante.id);
     final inicial =
@@ -143,18 +180,33 @@ class TutorHome extends StatelessWidget {
           const SizedBox(width: AppSpacing.entreTarjetas),
           Expanded(
             child: TarjetaDato(
-              icono: Icons.check_circle_outline,
-              valor: '$completadas',
-              etiqueta: 'Completadas',
+              icono: Icons.error_outline,
+              valor: '$atrasadas',
+              etiqueta: 'Atrasadas',
+              alerta: atrasadas > 0,
             ),
           ),
         ],
       ),
       const SizedBox(height: AppSpacing.entreTarjetas),
-      TarjetaDato(
-        icono: Icons.military_tech_outlined,
-        valor: '$xp',
-        etiqueta: 'XP acumulado',
+      Row(
+        children: [
+          Expanded(
+            child: TarjetaDato(
+              icono: Icons.check_circle_outline,
+              valor: '$completadas',
+              etiqueta: 'Completadas',
+            ),
+          ),
+          const SizedBox(width: AppSpacing.entreTarjetas),
+          Expanded(
+            child: TarjetaDato(
+              icono: Icons.military_tech_outlined,
+              valor: '$xp',
+              etiqueta: 'XP acumulado',
+            ),
+          ),
+        ],
       ),
       const SizedBox(height: AppSpacing.entreSecciones),
       ElevatedButton.icon(
@@ -174,6 +226,18 @@ class TutorHome extends StatelessWidget {
         child: const Text(
           'Cambiar estudiante',
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      ),
+      const SizedBox(height: 4),
+      TextButton(
+        onPressed: () => _confirmarDesvincular(context, estudiante),
+        child: const Text(
+          'Desvincular estudiante',
+          style: TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+            color: AppColors.peligro,
+          ),
         ),
       ),
     ];

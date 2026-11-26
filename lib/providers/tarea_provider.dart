@@ -121,6 +121,13 @@ class TareaProvider extends ChangeNotifier {
         .length;
   }
 
+  /// Tareas pendientes cuya fecha de entrega ya pasó.
+  int contarVencidas(int estudianteId) {
+    return _tareas
+        .where((t) => t.estudianteId == estudianteId && t.vencida)
+        .length;
+  }
+
   /// XP total: puntos por cada tarea completada.
   int xpDe(int estudianteId) {
     return contarPorEstado(estudianteId, Estado.completada) * xpPorTarea;

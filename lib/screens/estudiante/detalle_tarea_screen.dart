@@ -14,10 +14,16 @@ import '../../widgets/etiqueta_prioridad.dart';
 import 'nueva_tarea_screen.dart';
 
 /// Detalle de una tarea: instrucciones, fecha, y acciones de completar/eliminar.
+/// Con [soloLectura] (vista del tutor) se ocultan todas las acciones.
 class DetalleTareaScreen extends StatelessWidget {
   final int tareaId;
+  final bool soloLectura;
 
-  const DetalleTareaScreen({super.key, required this.tareaId});
+  const DetalleTareaScreen({
+    super.key,
+    required this.tareaId,
+    this.soloLectura = false,
+  });
 
   Future<void> _confirmarEliminar(BuildContext context, Tarea tarea) async {
     final confirmado = await showDialog<bool>(
@@ -161,7 +167,7 @@ class DetalleTareaScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (pendiente)
+                  if (pendiente && !soloLectura)
                     BotonCircular(
                       icono: Icons.edit_outlined,
                       onPressed: () => Navigator.of(context).push(
@@ -245,17 +251,23 @@ class DetalleTareaScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            const Icon(
-                              Icons.calendar_today_outlined,
-                              color: AppColors.verde,
+                            Icon(
+                              tarea.vencida
+                                  ? Icons.error_outline
+                                  : Icons.calendar_today_outlined,
+                              color: tarea.vencida
+                                  ? AppColors.peligro
+                                  : AppColors.verde,
                             ),
                             const SizedBox(width: 12),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'FECHA DE ENTREGA',
-                                  style: TextStyle(
+                                Text(
+                                  tarea.vencida
+                                      ? 'FECHA DE ENTREGA · VENCIDA'
+                                      : 'FECHA DE ENTREGA',
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 0.6,
@@ -265,10 +277,12 @@ class DetalleTareaScreen extends StatelessWidget {
                                 const SizedBox(height: 2),
                                 Text(
                                   formatoEntrega(tarea.fechaEntrega),
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.texto,
+                                    color: tarea.vencida
+                                        ? AppColors.peligro
+                                        : AppColors.texto,
                                   ),
                                 ),
                               ],
@@ -280,35 +294,37 @@ class DetalleTareaScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              if (pendiente) ...[
-                ElevatedButton.icon(
-                  onPressed: () => _completar(context, tarea),
-                  style: AppDecor.botonPrimario(),
-                  icon: const Icon(Icons.check_circle_outline),
-                  label: const Text('Marcar como completada', style: AppText.boton),
-                ),
-                const SizedBox(height: 12),
-              ] else ...[
-                OutlinedButton.icon(
-                  onPressed: () => _reabrir(context, tarea),
-                  style: AppDecor.botonSecundario(),
-                  icon: const Icon(Icons.undo),
-                  label: const Text(
-                    'Marcar como pendiente',
+              if (!soloLectura) ...[
+                const SizedBox(height: 16),
+                if (pendiente) ...[
+                  ElevatedButton.icon(
+                    onPressed: () => _completar(context, tarea),
+                    style: AppDecor.botonPrimario(),
+                    icon: const Icon(Icons.check_circle_outline),
+                    label: const Text('Marcar como completada', style: AppText.boton),
+                  ),
+                  const SizedBox(height: 12),
+                ] else ...[
+                  OutlinedButton.icon(
+                    onPressed: () => _reabrir(context, tarea),
+                    style: AppDecor.botonSecundario(),
+                    icon: const Icon(Icons.undo),
+                    label: const Text(
+                      'Marcar como pendiente',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                OutlinedButton(
+                  onPressed: () => _confirmarEliminar(context, tarea),
+                  style: AppDecor.botonSecundario(color: AppColors.peligro),
+                  child: const Text(
+                    'Eliminar tarea',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                 ),
-                const SizedBox(height: 12),
               ],
-              OutlinedButton(
-                onPressed: () => _confirmarEliminar(context, tarea),
-                style: AppDecor.botonSecundario(color: AppColors.peligro),
-                child: const Text(
-                  'Eliminar tarea',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
             ],
           ),
         ),
