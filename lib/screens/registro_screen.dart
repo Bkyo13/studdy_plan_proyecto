@@ -25,6 +25,11 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _confirmarCtrl = TextEditingController();
   bool _ocultarPassword = true;
   Rol _rol = Rol.estudiante;
+  bool _cargando = false;
+
+  /// Roles que se pueden elegir al registrarse. El de administrador se asigna
+  /// a mano en la consola de Firebase.
+  static const _rolesRegistro = [Rol.estudiante, Rol.tutor];
 
   @override
   void dispose() {
@@ -35,14 +40,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
     super.dispose();
   }
 
-  void _crearCuenta() {
-    if (!_formKey.currentState!.validate()) return;
-    final error = context.read<AuthProvider>().registrar(
+  Future<void> _crearCuenta() async {
+    if (_cargando || !_formKey.currentState!.validate()) return;
+    setState(() => _cargando = true);
+    final error = await context.read<AuthProvider>().registrar(
           nombre: _nombreCtrl.text,
           correo: _correoCtrl.text,
           contrasena: _passwordCtrl.text,
           rol: _rol,
         );
+    if (!mounted) return;
+    setState(() => _cargando = false);
     if (error != null) {
       mostrarMensaje(context, error, error: true);
       return;
@@ -173,9 +181,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        for (final rol in Rol.values) ...[
+                        for (final rol in _rolesRegistro) ...[
                           Expanded(child: _chipRol(rol)),
-                          if (rol != Rol.values.last) const SizedBox(width: 8),
+                          if (rol != _rolesRegistro.last) const SizedBox(width: 8),
                         ],
                       ],
                     ),
@@ -183,9 +191,18 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     Text(_rol.descripcion, style: AppText.pequeno),
                     const SizedBox(height: 28),
                     ElevatedButton(
-                      onPressed: _crearCuenta,
+                      onPressed: _cargando ? null : _crearCuenta,
                       style: AppDecor.botonPrimario(),
-                      child: const Text('Crear cuenta', style: AppText.boton),
+                      child: _cargando
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Crear cuenta', style: AppText.boton),
                     ),
                     const SizedBox(height: 20),
                     InkWell(

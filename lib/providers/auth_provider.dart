@@ -1,382 +1,373 @@
-import 'dart:math';
+import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/sesion.dart';
-import '../models/token_recuperacion.dart';
 import '../models/usuario.dart';
 
-/// Maneja la sesión y los usuarios (en memoria, solo para la demo).
+/// Sesión, cuentas y perfiles, con Firebase.
 ///
-/// La sesión se identifica con un token que se guarda en el dispositivo
-/// (shared_preferences). Al abrir la app se verifica que el token exista, que
-/// no haya vencido y que pertenezca a un usuario existente.
+/// - Firebase Authentication guarda las cuentas y las contraseñas (cifradas)
+///   y mantiene la sesión con su propio token (ID token), que se renueva solo.
+/// - Firestore guarda el perfil de cada usuario en `usuarios/{uid}`:
+///   nombre, correo, rol y proveedor.
+///
+/// Al abrir la app, [restaurarSesion] verifica que exista una sesión y que su
+/// token siga siendo válido para Firebase (la cuenta existe y no está
+/// desactivada).
 class AuthProvider extends ChangeNotifier {
   /// Mensajes de consola solo mientras se desarrolla (flutter run).
-  /// En la app publicada (modo release) no se imprime nada, para no dejar
-  /// datos de la sesión en los registros del teléfono.
   static void _log(String mensaje) {
     if (kDebugMode) debugPrint(mensaje);
   }
 
-  static const _claveToken = 'sesion_token';
-  static const _claveUsuario = 'sesion_usuario_id';
-  static const _claveCreada = 'sesion_creada';
-  static const _claveExpira = 'sesion_expira';
-  static const _duracionSesion = Duration(days: 7);
-  static const _duracionCodigo = Duration(minutes: 10);
+  /// Si el usuario desmarcó "Recordarme", la próxima vez que abra la app se
+  /// cierra la sesión y se muestra el login.
+  static const _claveRecordar = 'recordar_sesion';
 
-  final List<Usuario> _usuarios = [
-    const Usuario(
-      id: '1',
-      nombre: 'Sofía',
-      correo: 'sofia@demo.com',
-      contrasena: '123456',
-      rol: Rol.estudiante,
-    ),
-    const Usuario(
-      id: '2',
-      nombre: 'Carmen Torres',
-      correo: 'tutor@demo.com',
-      contrasena: '123456',
-      rol: Rol.tutor,
-    ),
-    const Usuario(
-      id: '3',
-      nombre: 'Administrador',
-      correo: 'admin@demo.com',
-      contrasena: '123456',
-      rol: Rol.administrador,
-    ),
-  ];
-
-  final List<TokenRecuperacion> _tokensRecuperacion = [];
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final CollectionReference<Map<String, dynamic>> _coleccion =
+      FirebaseFirestore.instance.collection('usuarios');
 
   Usuario? _usuarioActual;
-  Sesion? _sesion;
-  bool _sesionRecordada = false;
-  int _siguienteId = 4;
-  int _siguienteTokenId = 1;
+  bool _sesionRecordada = true;
+  List<Usuario> _usuarios = [];
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subUsuarios;
 
   Usuario? get usuarioActual => _usuarioActual;
 
-  /// Sesión activa (con su token), o null si no hay.
-  Sesion? get sesion => _sesion;
-
-  /// Si el token de la sesión está guardado en el dispositivo.
+  /// Si la sesión se mantiene al cerrar y volver a abrir la app.
   bool get sesionRecordada => _sesionRecordada;
 
+  /// Usuarios registrados (se actualiza en tiempo real mientras hay sesión).
+  /// Lo usan el panel del admin (totales) y el tutor (buscar y ver nombres).
   List<Usuario> get usuarios => List.unmodifiable(_usuarios);
 
-  // ---------------------------------------------------------------------
-  // Token de sesión
-  // ---------------------------------------------------------------------
-
-  String _generarToken() {
-    final azar = Random.secure();
-    return List.generate(32, (_) => azar.nextInt(16).toRadixString(16)).join();
+  @override
+  void dispose() {
+    _subUsuarios?.cancel();
+    super.dispose();
   }
 
-  Sesion _nuevaSesion(String usuarioId) {
-    final ahora = DateTime.now();
-    return Sesion(
-      token: _generarToken(),
-      usuarioId: usuarioId,
-      fechaCreacion: ahora,
-      fechaExpiracion: ahora.add(_duracionSesion),
-    );
-  }
+  // ---------------------------------------------------------------------
+  // Sesión
+  // ---------------------------------------------------------------------
 
-  /// Verifica si existe una sesión activa y válida mediante el token guardado.
-  /// Devuelve true (y deja al usuario con la sesión abierta) si es válida.
+  /// Verifica si hay una sesión activa y válida. Devuelve true si se pudo
+  /// entrar directo (sin pasar por el login).
   Future<bool> restaurarSesion() async {
     try {
+      // Firebase recupera la sesión guardada en el teléfono; el primer valor
+      // del stream es el usuario restaurado (o null si no había).
+      final usuarioFirebase = await _auth.authStateChanges().first;
+      if (usuarioFirebase == null) {
+        _log('[Sesion] No hay sesión guardada: se mostrará el login.');
+        return false;
+      }
+
       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(_claveToken);
-      final usuarioId = prefs.getString(_claveUsuario);
-      final creada = DateTime.tryParse(prefs.getString(_claveCreada) ?? '');
-      final expira = DateTime.tryParse(prefs.getString(_claveExpira) ?? '');
-
-      if (token == null || usuarioId == null || creada == null || expira == null) {
-        _log('[Sesion] No hay token guardado: se mostrará el login.');
+      _sesionRecordada = prefs.getBool(_claveRecordar) ?? true;
+      if (!_sesionRecordada) {
+        _log('[Sesion] El usuario no pidió recordar la sesión: se cierra.');
+        await _auth.signOut();
         return false;
       }
 
-      final sesion = Sesion(
-        token: token,
-        usuarioId: usuarioId,
-        fechaCreacion: creada,
-        fechaExpiracion: expira,
-      );
-
-      if (!sesion.vigente) {
-        _log('[Sesion] Token vencido (expiró el $expira): se borra y se muestra el login.');
-        await _borrarSesionGuardada();
-        return false;
+      // Pide a Firebase un token nuevo: si la cuenta se borró o se
+      // desactivó, falla y se cierra la sesión. Sin internet se sigue con la
+      // sesión guardada (Firestore funciona sin conexión con su caché).
+      try {
+        await usuarioFirebase.getIdToken(true);
+      } on FirebaseAuthException catch (e) {
+        if (e.code != 'network-request-failed') {
+          _log('[Sesion] Token rechazado por Firebase (${e.code}): se cierra.');
+          await _auth.signOut();
+          return false;
+        }
+        _log('[Sesion] Sin conexión: se usa la sesión guardada.');
       }
 
-      final usuario = porId(usuarioId);
-      if (usuario == null) {
-        _log('[Sesion] El token pertenece a un usuario que ya no existe: se borra.');
-        await _borrarSesionGuardada();
+      final ok = await _cargarPerfil(usuarioFirebase);
+      if (!ok) {
+        _log('[Sesion] La cuenta no tiene perfil en Firestore: se cierra.');
+        await _auth.signOut();
         return false;
       }
-
-      _sesion = sesion;
-      _usuarioActual = usuario;
-      _sesionRecordada = true;
-      notifyListeners();
-      _log(
-        '[Sesion] Token válido (${token.substring(0, 8)}…) para el usuario ${usuario.id}. '
-        'Expira el $expira.',
-      );
+      _log('[Sesion] Token de Firebase válido para el usuario '
+          '${usuarioFirebase.uid.substring(0, 6)}… (rol: ${_usuarioActual!.rol.name}).');
       return true;
     } catch (e) {
-      // Por ejemplo, un token guardado con un formato anterior: se borra
-      // para que no vuelva a fallar en cada arranque.
-      _log('[Sesion] Error al verificar el token: $e');
-      await _borrarSesionGuardada();
+      _log('[Sesion] Error al verificar la sesión: $e');
       return false;
     }
   }
 
-  Future<void> _guardarSesion(Sesion sesion) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_claveToken, sesion.token);
-      await prefs.setString(_claveUsuario, sesion.usuarioId);
-      await prefs.setString(_claveCreada, sesion.fechaCreacion.toIso8601String());
-      await prefs.setString(_claveExpira, sesion.fechaExpiracion.toIso8601String());
-      _log('[Sesion] Token guardado (${sesion.token.substring(0, 8)}…), '
-          'expira el ${sesion.fechaExpiracion}.');
-    } catch (e) {
-      _log('[Sesion] No se pudo guardar el token: $e');
-    }
-  }
+  /// Lee el perfil de Firestore y empieza a escuchar la lista de usuarios.
+  Future<bool> _cargarPerfil(User usuarioFirebase) async {
+    final doc = await _coleccion.doc(usuarioFirebase.uid).get();
+    final datos = doc.data();
+    if (datos == null) return false;
 
-  Future<void> _borrarSesionGuardada() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_claveToken);
-      await prefs.remove(_claveUsuario);
-      await prefs.remove(_claveCreada);
-      await prefs.remove(_claveExpira);
-    } catch (e) {
-      _log('[Sesion] No se pudo borrar el token: $e');
+    var usuario = Usuario.desdeMapa(doc.id, datos);
+    // Si cambió su correo (confirmó el enlace de verificación), se actualiza
+    // también en el perfil.
+    final correoReal = usuarioFirebase.email?.toLowerCase();
+    if (correoReal != null && correoReal != usuario.correo) {
+      usuario = usuario.copyWith(correo: correoReal);
+      await _coleccion.doc(usuario.id).update({'correo': correoReal});
     }
-  }
 
-  /// Ajuste "Mantener sesión iniciada": guarda o borra el token del dispositivo.
-  void cambiarRecordarSesion(bool recordar) {
-    _sesionRecordada = recordar;
-    final sesion = _sesion;
-    if (recordar && sesion != null) {
-      _guardarSesion(sesion);
-    } else {
-      _borrarSesionGuardada();
-    }
+    _usuarioActual = usuario;
+    _escucharUsuarios();
     notifyListeners();
+    return true;
   }
 
-  // ---------------------------------------------------------------------
-  // Inicio de sesión, registro y cierre
-  // ---------------------------------------------------------------------
-
-  /// Devuelve null si todo salió bien, o el mensaje de error.
-  /// Con [recordarme] el token se guarda para reabrir la sesión al volver.
-  String? iniciarSesion(
-    String correo,
-    String contrasena, {
-    bool recordarme = false,
-  }) {
-    // Mismo mensaje si el correo no existe o si la contraseña está mal, para
-    // no revelar qué correos tienen cuenta en StudyPlan.
-    const errorGenerico = 'Correo o contraseña incorrectos';
-    final buscado = correo.trim().toLowerCase();
-    for (final u in _usuarios) {
-      if (u.correo.toLowerCase() == buscado) {
-        if (u.contrasena != contrasena) {
-          return errorGenerico;
-        }
-        _usuarioActual = u;
-        _sesion = _nuevaSesion(u.id);
-        _sesionRecordada = recordarme;
-        if (recordarme) {
-          _guardarSesion(_sesion!);
-        } else {
-          _borrarSesionGuardada();
+  void _escucharUsuarios() {
+    _subUsuarios?.cancel();
+    _subUsuarios = _coleccion.snapshots().listen(
+      (snap) {
+        _usuarios = snap.docs
+            .map((d) => Usuario.desdeMapa(d.id, d.data()))
+            .toList();
+        // Mantiene al día el perfil propio (por ejemplo, si el admin le
+        // cambia algo desde la consola).
+        final actual = _usuarioActual;
+        if (actual != null) {
+          for (final u in _usuarios) {
+            if (u.id == actual.id) _usuarioActual = u;
+          }
         }
         notifyListeners();
-        return null;
-      }
-    }
-    return errorGenerico;
+      },
+      onError: (Object e) => _log('[Usuarios] No se pudo leer la lista: $e'),
+    );
   }
 
-  /// Crea la cuenta e inicia sesión. Devuelve null si salió bien.
-  String? registrar({
+  Future<void> cambiarRecordarSesion(bool recordar) async {
+    _sesionRecordada = recordar;
+    notifyListeners();
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_claveRecordar, recordar);
+    } catch (e) {
+      _log('[Sesion] No se pudo guardar la preferencia: $e');
+    }
+  }
+
+  /// Devuelve null si entró, o el mensaje de error para mostrar.
+  Future<String?> iniciarSesion(
+    String correo,
+    String contrasena, {
+    bool recordarme = true,
+  }) async {
+    try {
+      final cred = await _auth.signInWithEmailAndPassword(
+        email: correo.trim().toLowerCase(),
+        password: contrasena,
+      );
+      final ok = await _cargarPerfil(cred.user!);
+      if (!ok) {
+        await _auth.signOut();
+        return 'No se encontró el perfil de esta cuenta';
+      }
+      await cambiarRecordarSesion(recordarme);
+      _log('[Sesion] Inicio de sesión correcto (recordar: $recordarme).');
+      return null;
+    } on FirebaseAuthException catch (e) {
+      _log('[Sesion] Error al iniciar sesión: ${e.code}');
+      return _mensajeDeError(e.code);
+    } catch (e) {
+      _log('[Sesion] Error al iniciar sesión: $e');
+      return 'No se pudo iniciar sesión. Intenta de nuevo.';
+    }
+  }
+
+  /// Crea la cuenta en Firebase y su perfil en Firestore, y deja la sesión
+  /// abierta. Devuelve null si se creó, o el mensaje de error.
+  Future<String?> registrar({
     required String nombre,
     required String correo,
     required String contrasena,
     required Rol rol,
-  }) {
-    final correoLimpio = correo.trim().toLowerCase();
-    final existe = _usuarios.any((u) => u.correo.toLowerCase() == correoLimpio);
-    if (existe) {
-      return 'Ya existe una cuenta con ese correo';
+  }) async {
+    // El rol de administrador no se puede elegir desde la app: se asigna a
+    // mano en la consola de Firebase (y las reglas de Firestore lo impiden).
+    if (rol == Rol.administrador) {
+      return 'Ese tipo de cuenta no se puede crear desde la app';
     }
-    final nuevo = Usuario(
-      id: '${_siguienteId++}',
-      nombre: nombre.trim(),
-      correo: correoLimpio,
-      contrasena: contrasena,
-      rol: rol,
-    );
-    _usuarios.add(nuevo);
-    _usuarioActual = nuevo;
-    _sesion = _nuevaSesion(nuevo.id);
-    _sesionRecordada = false;
-    _borrarSesionGuardada();
-    notifyListeners();
-    return null;
+    User? nuevo;
+    try {
+      final cred = await _auth.createUserWithEmailAndPassword(
+        email: correo.trim().toLowerCase(),
+        password: contrasena,
+      );
+      nuevo = cred.user!;
+      await nuevo.updateDisplayName(nombre.trim());
+      final usuario = Usuario(
+        id: nuevo.uid,
+        nombre: nombre.trim(),
+        correo: correo.trim().toLowerCase(),
+        rol: rol,
+      );
+      await _coleccion.doc(usuario.id).set({
+        ...usuario.aMapa(),
+        'fechaRegistro': FieldValue.serverTimestamp(),
+      });
+      _usuarioActual = usuario;
+      _escucharUsuarios();
+      await cambiarRecordarSesion(true);
+      _log('[Cuenta] Cuenta creada (rol: ${rol.name}).');
+      notifyListeners();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      _log('[Cuenta] Error al registrar: ${e.code}');
+      return _mensajeDeError(e.code);
+    } catch (e) {
+      // Si se creó la cuenta pero falló el perfil, se borra la cuenta para
+      // no dejarla a medias.
+      _log('[Cuenta] Error al guardar el perfil: $e');
+      try {
+        await nuevo?.delete();
+      } catch (_) {}
+      return 'No se pudo crear la cuenta. Revisa tu conexión e intenta de nuevo.';
+    }
   }
 
-  void cerrarSesion() {
+  Future<void> cerrarSesion() async {
+    await _subUsuarios?.cancel();
+    _subUsuarios = null;
     _usuarioActual = null;
-    _sesion = null;
-    _sesionRecordada = false;
+    _usuarios = [];
     notifyListeners();
-    _borrarSesionGuardada();
-    _log('[Sesion] Sesión cerrada y token eliminado.');
+    try {
+      await _auth.signOut();
+      _log('[Sesion] Sesión cerrada.');
+    } catch (e) {
+      _log('[Sesion] Error al cerrar sesión: $e');
+    }
   }
 
   // ---------------------------------------------------------------------
   // Perfil
   // ---------------------------------------------------------------------
 
-  void _reemplazarUsuario(Usuario nuevo) {
-    final i = _usuarios.indexWhere((u) => u.id == nuevo.id);
-    if (i != -1) _usuarios[i] = nuevo;
-    if (_usuarioActual?.id == nuevo.id) _usuarioActual = nuevo;
-    notifyListeners();
+  /// Confirma la contraseña con Firebase (reautenticación). Firebase la pide
+  /// antes de acciones delicadas, como cambiar la contraseña o borrar la cuenta.
+  Future<bool> contrasenaCorrecta(String contrasena) async {
+    final u = _auth.currentUser;
+    final correo = u?.email;
+    if (u == null || correo == null) return false;
+    try {
+      await u.reauthenticateWithCredential(
+        EmailAuthProvider.credential(email: correo, password: contrasena),
+      );
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _log('[Cuenta] Reautenticación fallida: ${e.code}');
+      return false;
+    }
   }
 
-  /// ¿La contraseña escrita es la de la cuenta con sesión abierta?
-  bool contrasenaCorrecta(String contrasena) {
-    return _usuarioActual != null && _usuarioActual!.contrasena == contrasena;
-  }
-
-  /// Cambia nombre y correo de la cuenta actual. Devuelve null si salió bien,
-  /// o el mensaje de error (por ejemplo, si el correo ya lo usa otra cuenta).
-  String? actualizarPerfil({required String nombre, required String correo}) {
+  /// Cambia el nombre y/o el correo. El correo nuevo no se cambia de
+  /// inmediato: Firebase manda un enlace al correo nuevo y el cambio se
+  /// aplica cuando el usuario lo abre. Devuelve null si todo salió bien.
+  Future<String?> actualizarPerfil({
+    required String nombre,
+    required String correo,
+  }) async {
     final actual = _usuarioActual;
-    if (actual == null) return 'No hay una sesión activa';
-    final correoLimpio = correo.trim().toLowerCase();
-    final repetido = _usuarios.any(
-      (u) => u.id != actual.id && u.correo.toLowerCase() == correoLimpio,
-    );
-    if (repetido) return 'Ya existe una cuenta con ese correo';
-    _reemplazarUsuario(
-      actual.copyWith(nombre: nombre.trim(), correo: correoLimpio),
-    );
-    return null;
+    final u = _auth.currentUser;
+    if (actual == null || u == null) return 'No hay una sesión activa';
+
+    final nuevoNombre = nombre.trim();
+    final nuevoCorreo = correo.trim().toLowerCase();
+    try {
+      if (nuevoNombre != actual.nombre) {
+        await _coleccion.doc(actual.id).update({'nombre': nuevoNombre});
+        await u.updateDisplayName(nuevoNombre);
+        _usuarioActual = actual.copyWith(nombre: nuevoNombre);
+        notifyListeners();
+      }
+      if (nuevoCorreo != actual.correo) {
+        await u.verifyBeforeUpdateEmail(nuevoCorreo);
+        _log('[Cuenta] Enlace de verificación enviado al correo nuevo.');
+      }
+      return null;
+    } on FirebaseAuthException catch (e) {
+      _log('[Cuenta] Error al actualizar el perfil: ${e.code}');
+      return _mensajeDeError(e.code);
+    } catch (e) {
+      _log('[Cuenta] Error al actualizar el perfil: $e');
+      return 'No se pudo guardar. Revisa tu conexión.';
+    }
   }
 
-  /// Cambia la contraseña de la cuenta actual (solo cuentas de acceso local).
-  /// Devuelve null si salió bien, o el mensaje de error.
-  String? cambiarContrasena({required String actual, required String nueva}) {
-    final usuario = _usuarioActual;
-    if (usuario == null) return 'No hay una sesión activa';
-    if (!usuario.accesoLocal) return 'Esta cuenta no usa contraseña';
-    if (usuario.contrasena != actual) {
+  /// Devuelve null si se cambió, o el mensaje de error.
+  Future<String?> cambiarContrasena({
+    required String actual,
+    required String nueva,
+  }) async {
+    final u = _auth.currentUser;
+    if (u == null) return 'No hay una sesión activa';
+    if (!await contrasenaCorrecta(actual)) {
       return 'La contraseña actual no es correcta';
     }
-    _reemplazarUsuario(usuario.copyWith(contrasena: nueva));
-    _log('[Cuenta] Contraseña actualizada para el usuario ${usuario.id}.');
-    return null;
+    try {
+      await u.updatePassword(nueva);
+      _log('[Cuenta] Contraseña actualizada.');
+      return null;
+    } on FirebaseAuthException catch (e) {
+      _log('[Cuenta] Error al cambiar la contraseña: ${e.code}');
+      return _mensajeDeError(e.code);
+    }
   }
 
-  /// Elimina la cuenta actual y cierra la sesión. Los datos del estudiante
-  /// (tareas, logros, vínculos) los borra quien llama a este método.
-  void eliminarCuenta() {
-    final usuario = _usuarioActual;
-    if (usuario == null) return;
-    _usuarios.removeWhere((u) => u.id == usuario.id);
-    _tokensRecuperacion.removeWhere((t) => t.usuarioId == usuario.id);
-    _usuarioActual = null;
-    _sesion = null;
-    _sesionRecordada = false;
-    notifyListeners();
-    _borrarSesionGuardada();
-    _log('[Cuenta] Cuenta eliminada: usuario ${usuario.id}.');
+  /// Borra el perfil y la cuenta. Antes hay que llamar a [contrasenaCorrecta]
+  /// (Firebase exige un inicio de sesión reciente) y borrar los datos del
+  /// estudiante en los otros providers. Devuelve null si se borró.
+  Future<String?> eliminarCuenta() async {
+    final u = _auth.currentUser;
+    final actual = _usuarioActual;
+    if (u == null || actual == null) return 'No hay una sesión activa';
+    try {
+      await _subUsuarios?.cancel();
+      _subUsuarios = null;
+      await _coleccion.doc(actual.id).delete();
+      await u.delete();
+      _usuarioActual = null;
+      _usuarios = [];
+      _log('[Cuenta] Cuenta eliminada.');
+      notifyListeners();
+      return null;
+    } on FirebaseAuthException catch (e) {
+      _log('[Cuenta] Error al eliminar la cuenta: ${e.code}');
+      return _mensajeDeError(e.code);
+    } catch (e) {
+      _log('[Cuenta] Error al eliminar la cuenta: $e');
+      return 'No se pudo eliminar la cuenta. Revisa tu conexión.';
+    }
   }
 
   // ---------------------------------------------------------------------
   // Recuperación de contraseña
   // ---------------------------------------------------------------------
 
-  Usuario? _buscarPorCorreo(String correo) {
-    final buscado = correo.trim().toLowerCase();
-    for (final u in _usuarios) {
-      if (u.correo.toLowerCase() == buscado) return u;
-    }
-    return null;
-  }
-
-  /// Genera un código de 6 dígitos para la cuenta con ese correo y lo devuelve.
-  /// Devuelve null si no existe una cuenta con ese correo.
-  /// (En una app real el código se enviaría por correo; en esta demo se
-  /// muestra en pantalla.)
-  String? solicitarRecuperacion(String correo) {
-    final usuario = _buscarPorCorreo(correo);
-    if (usuario == null) {
-      _log('[Recuperacion] No existe una cuenta con ese correo.');
+  /// Firebase manda un correo con un enlace para crear una contraseña nueva.
+  /// Si el correo no tiene cuenta no se avisa (para no revelar qué correos
+  /// están registrados); solo se devuelve error si algo falló de verdad.
+  Future<String?> solicitarRecuperacion(String correo) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: correo.trim().toLowerCase());
+      _log('[Recuperacion] Correo de recuperación solicitado.');
       return null;
+    } on FirebaseAuthException catch (e) {
+      _log('[Recuperacion] ${e.code}');
+      if (e.code == 'user-not-found') return null;
+      return _mensajeDeError(e.code);
     }
-    // Los códigos anteriores de esa cuenta dejan de servir.
-    for (final t in _tokensRecuperacion) {
-      if (t.usuarioId == usuario.id) t.usado = true;
-    }
-    final codigo = (Random.secure().nextInt(900000) + 100000).toString();
-    _tokensRecuperacion.add(
-      TokenRecuperacion(
-        id: '${_siguienteTokenId++}',
-        token: codigo,
-        usuarioId: usuario.id,
-        fechaExpiracion: DateTime.now().add(_duracionCodigo),
-      ),
-    );
-    _log('[Recuperacion] Código generado para el usuario ${usuario.id}; vence en 10 minutos.');
-    return codigo;
-  }
-
-  /// Cambia la contraseña si el código es correcto, no se ha usado y no ha
-  /// vencido. Devuelve null si salió bien, o el mensaje de error.
-  String? restablecerContrasena({
-    required String correo,
-    required String codigo,
-    required String nuevaContrasena,
-  }) {
-    final usuario = _buscarPorCorreo(correo);
-    if (usuario == null) {
-      return 'No existe una cuenta con ese correo';
-    }
-
-    TokenRecuperacion? token;
-    for (final t in _tokensRecuperacion) {
-      if (t.usuarioId == usuario.id && t.token == codigo.trim()) {
-        token = t;
-      }
-    }
-    if (token == null) return 'El código no es correcto';
-    if (token.usado) return 'Ese código ya no sirve. Solicita uno nuevo';
-    if (!token.vigente) return 'El código venció. Solicita uno nuevo';
-
-    token.usado = true;
-    _reemplazarUsuario(usuario.copyWith(contrasena: nuevaContrasena));
-    _log('[Recuperacion] Contraseña actualizada para el usuario ${usuario.id}.');
-    return null;
   }
 
   // ---------------------------------------------------------------------
@@ -387,10 +378,10 @@ class AuthProvider extends ChangeNotifier {
     for (final u in _usuarios) {
       if (u.id == id) return u;
     }
+    if (_usuarioActual?.id == id) return _usuarioActual;
     return null;
   }
 
-  /// Lo usa el tutor para vincular a un estudiante por correo.
   Usuario? buscarEstudiantePorCorreo(String correo) {
     final buscado = correo.trim().toLowerCase();
     for (final u in _usuarios) {
@@ -399,5 +390,33 @@ class AuthProvider extends ChangeNotifier {
       }
     }
     return null;
+  }
+
+  // ---------------------------------------------------------------------
+  // Mensajes de error de Firebase en español
+  // ---------------------------------------------------------------------
+
+  static String _mensajeDeError(String codigo) {
+    switch (codigo) {
+      case 'invalid-credential':
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-email':
+        return 'Correo o contraseña incorrectos';
+      case 'email-already-in-use':
+        return 'Ya existe una cuenta con ese correo';
+      case 'weak-password':
+        return 'La contraseña es muy débil. Usa al menos 6 caracteres.';
+      case 'user-disabled':
+        return 'Esta cuenta está desactivada';
+      case 'too-many-requests':
+        return 'Demasiados intentos. Espera unos minutos e intenta de nuevo.';
+      case 'network-request-failed':
+        return 'Sin conexión a internet. Revisa tu red e intenta de nuevo.';
+      case 'requires-recent-login':
+        return 'Por seguridad, cierra sesión y vuelve a entrar para hacer este cambio.';
+      default:
+        return 'Ocurrió un error ($codigo). Intenta de nuevo.';
+    }
   }
 }

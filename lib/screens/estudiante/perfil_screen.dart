@@ -30,6 +30,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
   final _nuevaCtrl = TextEditingController();
   final _confirmarCtrl = TextEditingController();
   bool _ocultarPassword = true;
+  bool _guardando = false;
 
   @override
   void initState() {
@@ -55,63 +56,99 @@ class _PerfilScreenState extends State<PerfilScreen> {
       _nuevaCtrl.text.isNotEmpty ||
       _confirmarCtrl.text.isNotEmpty;
 
-  void _guardar() {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _guardar() async {
+    if (_guardando || !_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     final usuario = auth.usuarioActual;
     if (usuario == null) return;
 
     final nuevoNombre = _nombreCtrl.text.trim();
     final nuevoCorreo = _correoCtrl.text.trim().toLowerCase();
-    final cambiaPerfil =
-        nuevoNombre != usuario.nombre || nuevoCorreo != usuario.correo.toLowerCase();
+    final cambiaNombre = nuevoNombre != usuario.nombre;
+    final cambiaCorreo = nuevoCorreo != usuario.correo.toLowerCase();
     final cambiaPassword = usuario.accesoLocal && _nuevaCtrl.text.isNotEmpty;
 
-    if (!cambiaPerfil && !cambiaPassword) {
+    if (!cambiaNombre && !cambiaCorreo && !cambiaPassword) {
       mostrarMensaje(context, 'No hay cambios que guardar');
       return;
     }
 
-    // Se validan las dos cosas antes de cambiar nada, para no dejar la
-    // cuenta a medias.
-    if (cambiaPassword && !auth.contrasenaCorrecta(_actualCtrl.text)) {
-      mostrarMensaje(context, 'La contraseña actual no es correcta', error: true);
-      return;
-    }
-    if (cambiaPerfil) {
-      final error = auth.actualizarPerfil(nombre: nuevoNombre, correo: nuevoCorreo);
-      if (error != null) {
-        mostrarMensaje(context, error, error: true);
-        return;
-      }
-    }
+    setState(() => _guardando = true);
+    // Primero la contraseña: Firebase confirma la actual antes de cambiarla,
+    // y si está mal no se toca nada más.
     if (cambiaPassword) {
-      final error = auth.cambiarContrasena(
+      final error = await auth.cambiarContrasena(
         actual: _actualCtrl.text,
         nueva: _nuevaCtrl.text,
       );
+      if (!mounted) return;
       if (error != null) {
+        setState(() => _guardando = false);
         mostrarMensaje(context, error, error: true);
         return;
       }
     }
+    if (cambiaNombre || cambiaCorreo) {
+      final error = await auth.actualizarPerfil(
+        nombre: nuevoNombre,
+        correo: nuevoCorreo,
+      );
+      if (!mounted) return;
+      if (error != null) {
+        setState(() => _guardando = false);
+        mostrarMensaje(context, error, error: true);
+        return;
+      }
+    }
+    if (!mounted) return;
+    setState(() => _guardando = false);
 
     _actualCtrl.clear();
     _nuevaCtrl.clear();
     _confirmarCtrl.clear();
     FocusScope.of(context).unfocus();
-    mostrarMensaje(context, 'Perfil actualizado');
+    if (cambiaCorreo) {
+      // El correo se cambia hasta que se confirme el enlace; mientras, el
+      // campo regresa al correo actual.
+      _correoCtrl.text = usuario.correo;
+      mostrarMensaje(
+        context,
+        'Te enviamos un enlace a $nuevoCorreo. El correo cambiará cuando lo abras.',
+      );
+    } else {
+      mostrarMensaje(context, 'Perfil actualizado');
+    }
   }
 
-
   Future<void> _eliminarCuenta() async {
+    final auth = context.read<AuthProvider>();
+    final usuario = auth.usuarioActual;
+    if (usuario == null) return;
+    final passwordCtrl = TextEditingController();
+
     final confirmado = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Eliminar cuenta'),
-        content: const Text(
-          'Se borrarán tu cuenta, tus tareas y tus logros. '
-          'Esta acción no se puede deshacer.',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Se borrarán tu cuenta, tus tareas y tus logros. '
+              'Esta acción no se puede deshacer.',
+            ),
+            if (usuario.accesoLocal) ...[
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Escribe tu contraseña para confirmar',
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
@@ -128,21 +165,37 @@ class _PerfilScreenState extends State<PerfilScreen> {
         ],
       ),
     );
+    final contrasena = passwordCtrl.text;
+    passwordCtrl.dispose();
     if (confirmado != true || !mounted) return;
 
-    final auth = context.read<AuthProvider>();
+    setState(() => _guardando = true);
+    // Firebase pide confirmar la contraseña antes de borrar una cuenta.
+    if (usuario.accesoLocal && !await auth.contrasenaCorrecta(contrasena)) {
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      mostrarMensaje(context, 'La contraseña no es correcta', error: true);
+      return;
+    }
+    if (!mounted) return;
+
     final tareas = context.read<TareaProvider>();
     final logros = context.read<LogroProvider>();
     final vinculos = context.read<VinculoProvider>();
-    final id = auth.usuarioActual?.id;
-    if (id == null) return;
+    final id = usuario.id;
 
-    mostrarMensaje(context, 'Tu cuenta fue eliminada');
-    Navigator.of(context).pop();
+    final error = await auth.eliminarCuenta();
+    if (!mounted) return;
+    if (error != null) {
+      setState(() => _guardando = false);
+      mostrarMensaje(context, error, error: true);
+      return;
+    }
     tareas.eliminarDeEstudiante(id);
     logros.eliminarDeEstudiante(id);
     vinculos.eliminarDeEstudiante(id);
-    auth.eliminarCuenta();
+    mostrarMensaje(context, 'Tu cuenta fue eliminada');
+    Navigator.of(context).pop();
   }
 
   @override
@@ -251,9 +304,18 @@ class _PerfilScreenState extends State<PerfilScreen> {
                       ),
                     const SizedBox(height: 28),
                     ElevatedButton(
-                      onPressed: _guardar,
+                      onPressed: _guardando ? null : _guardar,
                       style: AppDecor.botonPrimario(),
-                      child: const Text('Guardar cambios', style: AppText.boton),
+                      child: _guardando
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Guardar cambios', style: AppText.boton),
                     ),
                     const SizedBox(height: AppSpacing.entreSecciones),
 
@@ -273,7 +335,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     ),
                     const SizedBox(height: 12),
                     OutlinedButton.icon(
-                      onPressed: _eliminarCuenta,
+                      onPressed: _guardando ? null : _eliminarCuenta,
                       style: AppDecor.botonSecundario(color: AppColors.peligro),
                       icon: const Icon(Icons.delete_outline),
                       label: const Text(

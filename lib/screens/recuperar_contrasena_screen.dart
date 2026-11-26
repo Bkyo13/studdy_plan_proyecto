@@ -9,9 +9,9 @@ import '../utils/validadores.dart';
 import '../widgets/boton_circular.dart';
 import '../widgets/logo_app.dart';
 
-/// Recuperación de contraseña en dos pasos:
-/// 1) se escribe el correo y se genera un código temporal;
-/// 2) se escribe el código y la nueva contraseña.
+/// Recuperación de contraseña con Firebase: se escribe el correo y Firebase
+/// manda un enlace para crear una contraseña nueva. La contraseña se cambia
+/// en esa página de Firebase; después se inicia sesión con la nueva.
 class RecuperarContrasenaScreen extends StatefulWidget {
   /// Correo que ya había escrito en el login (para no volver a pedirlo).
   final String correoInicial;
@@ -24,20 +24,12 @@ class RecuperarContrasenaScreen extends StatefulWidget {
 }
 
 class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
-  final _formCorreo = GlobalKey<FormState>();
-  final _formCodigo = GlobalKey<FormState>();
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _correoCtrl;
-  final _codigoCtrl = TextEditingController();
-  final _passwordCtrl = TextEditingController();
-  final _confirmarCtrl = TextEditingController();
+  bool _cargando = false;
 
-  bool _ocultarPassword = true;
-
-  /// Código generado (null mientras se está en el paso 1).
-  String? _codigoGenerado;
-  String _correoDestino = '';
-
-  bool get _enPaso2 => _codigoGenerado != null;
+  /// Correo al que se pidió el enlace (null mientras no se envía).
+  String? _correoEnviado;
 
   @override
   void initState() {
@@ -48,42 +40,21 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
   @override
   void dispose() {
     _correoCtrl.dispose();
-    _codigoCtrl.dispose();
-    _passwordCtrl.dispose();
-    _confirmarCtrl.dispose();
     super.dispose();
   }
 
-  void _enviarCodigo() {
-    if (!_formCorreo.currentState!.validate()) return;
-    final codigo =
-        context.read<AuthProvider>().solicitarRecuperacion(_correoCtrl.text);
-    if (codigo == null) {
-      mostrarMensaje(context, 'No existe una cuenta con ese correo', error: true);
-      return;
-    }
-    setState(() {
-      _codigoGenerado = codigo;
-      _correoDestino = _correoCtrl.text.trim();
-      _codigoCtrl.clear();
-      _passwordCtrl.clear();
-      _confirmarCtrl.clear();
-    });
-  }
-
-  void _cambiarContrasena() {
-    if (!_formCodigo.currentState!.validate()) return;
-    final error = context.read<AuthProvider>().restablecerContrasena(
-          correo: _correoDestino,
-          codigo: _codigoCtrl.text,
-          nuevaContrasena: _passwordCtrl.text,
-        );
+  Future<void> _enviarEnlace() async {
+    if (_cargando || !_formKey.currentState!.validate()) return;
+    setState(() => _cargando = true);
+    final error =
+        await context.read<AuthProvider>().solicitarRecuperacion(_correoCtrl.text);
+    if (!mounted) return;
+    setState(() => _cargando = false);
     if (error != null) {
       mostrarMensaje(context, error, error: true);
       return;
     }
-    mostrarMensaje(context, 'Contraseña actualizada. Ya puedes iniciar sesión');
-    Navigator.of(context).pop();
+    setState(() => _correoEnviado = _correoCtrl.text.trim().toLowerCase());
   }
 
   @override
@@ -115,14 +86,14 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    _enPaso2
-                        ? 'Escribe el código y elige tu nueva contraseña.'
-                        : 'Escribe el correo de tu cuenta y te daremos un código para restablecerla.',
+                    _correoEnviado == null
+                        ? 'Escribe el correo de tu cuenta y te enviaremos un enlace para crear una contraseña nueva.'
+                        : 'Revisa tu bandeja de entrada.',
                     textAlign: TextAlign.center,
                     style: AppText.cuerpo,
                   ),
                   const SizedBox(height: 32),
-                  if (_enPaso2) _paso2() else _paso1(),
+                  if (_correoEnviado == null) _formulario() else _enviado(),
                 ],
               ),
             ),
@@ -132,9 +103,9 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
     );
   }
 
-  Widget _paso1() {
+  Widget _formulario() {
     return Form(
-      key: _formCorreo,
+      key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -143,8 +114,11 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
           TextFormField(
             controller: _correoCtrl,
             keyboardType: TextInputType.emailAddress,
+            inputFormatters: [
+              LengthLimitingTextInputFormatter(Limites.correo),
+            ],
             validator: validarCorreo,
-            onFieldSubmitted: (_) => _enviarCodigo(),
+            onFieldSubmitted: (_) => _enviarEnlace(),
             decoration: AppDecor.campo(
               hint: 'ejemplo@dominio.com',
               icono: Icons.mail_outline,
@@ -152,142 +126,69 @@ class _RecuperarContrasenaScreenState extends State<RecuperarContrasenaScreen> {
           ),
           const SizedBox(height: 28),
           ElevatedButton(
-            onPressed: _enviarCodigo,
+            onPressed: _cargando ? null : _enviarEnlace,
             style: AppDecor.botonPrimario(),
-            child: const Text('Enviar código', style: AppText.boton),
+            child: _cargando
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Enviar enlace', style: AppText.boton),
           ),
         ],
       ),
     );
   }
 
-  Widget _paso2() {
-    return Form(
-      key: _formCodigo,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _avisoCodigo(),
-          const SizedBox(height: 24),
-          const Text('Código de 6 dígitos', style: AppText.labelCampo),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _codigoCtrl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.digitsOnly,
-              LengthLimitingTextInputFormatter(6),
-            ],
-            textInputAction: TextInputAction.next,
-            validator: (v) => (v ?? '').trim().length != 6
-                ? 'Escribe el código de 6 dígitos'
-                : null,
-            decoration: AppDecor.campo(
-              hint: '000000',
-              icono: Icons.pin_outlined,
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text('Nueva contraseña', style: AppText.labelCampo),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _passwordCtrl,
-            obscureText: _ocultarPassword,
-            textInputAction: TextInputAction.next,
-            validator: validarPassword,
-            decoration: AppDecor.campo(
-              hint: 'Mínimo 6 caracteres',
-              icono: Icons.lock_outline,
-              sufijo: IconButton(
-                icon: Icon(
-                  _ocultarPassword
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: AppColors.textoSuave,
-                ),
-                onPressed: () =>
-                    setState(() => _ocultarPassword = !_ocultarPassword),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          const Text('Confirmar contraseña', style: AppText.labelCampo),
-          const SizedBox(height: 8),
-          TextFormField(
-            controller: _confirmarCtrl,
-            obscureText: _ocultarPassword,
-            validator: (v) {
-              if ((v ?? '').isEmpty) return 'Confirma tu contraseña';
-              if (v != _passwordCtrl.text) return 'Las contraseñas no coinciden';
-              return null;
-            },
-            decoration: AppDecor.campo(
-              hint: 'Repite tu contraseña',
-              icono: Icons.lock_outline,
-            ),
-          ),
-          const SizedBox(height: 28),
-          ElevatedButton(
-            onPressed: _cambiarContrasena,
-            style: AppDecor.botonPrimario(),
-            child: const Text('Cambiar contraseña', style: AppText.boton),
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: () => setState(() => _codigoGenerado = null),
-            child: const Text(
-              'Usar otro correo',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
+  Widget _enviado() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.interiorTarjeta),
+          decoration: AppDecor.tarjeta(),
+          child: Column(
+            children: [
+              const Icon(
+                Icons.mark_email_read_outlined,
+                size: 48,
                 color: AppColors.verde,
               ),
-            ),
+              const SizedBox(height: 12),
+              // Mismo mensaje exista o no la cuenta, para no revelar qué
+              // correos están registrados.
+              Text(
+                'Si $_correoEnviado tiene una cuenta en StudyPlan, te '
+                'llegará un correo con un enlace para crear tu contraseña '
+                'nueva. Revisa también la carpeta de spam.',
+                textAlign: TextAlign.center,
+                style: AppText.cuerpo,
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  /// En una app real el código llegaría por correo. En esta demo se muestra
-  /// aquí, y se aclara en pantalla para que no parezca un envío real.
-  Widget _avisoCodigo() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.verdeClaro,
-        borderRadius: BorderRadius.circular(AppRadius.tarjeta),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'SIMULACIÓN DE CORREO',
+        ),
+        const SizedBox(height: 28),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(),
+          style: AppDecor.botonPrimario(),
+          child: const Text('Volver al inicio de sesión', style: AppText.boton),
+        ),
+        const SizedBox(height: 12),
+        TextButton(
+          onPressed: () => setState(() => _correoEnviado = null),
+          child: const Text(
+            'Usar otro correo',
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.6,
+              fontWeight: FontWeight.w600,
               color: AppColors.verde,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Para $_correoDestino. En una app real este código llegaría a tu bandeja; aquí se muestra para la demostración y vence en 10 minutos.',
-            style: AppText.cuerpo,
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: Text(
-              _codigoGenerado ?? '',
-              style: const TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 8,
-                color: AppColors.texto,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

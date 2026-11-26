@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordCtrl = TextEditingController();
   bool _ocultarPassword = true;
   bool _recordarme = true;
+  bool _cargando = false;
 
   @override
   void dispose() {
@@ -30,13 +31,16 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _iniciarSesion() {
-    if (!_formKey.currentState!.validate()) return;
-    final error = context.read<AuthProvider>().iniciarSesion(
+  Future<void> _iniciarSesion() async {
+    if (_cargando || !_formKey.currentState!.validate()) return;
+    setState(() => _cargando = true);
+    final error = await context.read<AuthProvider>().iniciarSesion(
           _correoCtrl.text,
           _passwordCtrl.text,
           recordarme: _recordarme,
         );
+    if (!mounted) return;
+    setState(() => _cargando = false);
     if (error != null) {
       mostrarMensaje(context, error, error: true);
     }
@@ -120,9 +124,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     _filaRecordarme(),
                     const SizedBox(height: 16),
                     ElevatedButton(
-                      onPressed: _iniciarSesion,
+                      onPressed: _cargando ? null : _iniciarSesion,
                       style: AppDecor.botonPrimario(),
-                      child: const Text('Iniciar sesión', style: AppText.boton),
+                      child: _cargando
+                          ? const SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Iniciar sesión', style: AppText.boton),
                     ),
                     const SizedBox(height: 24),
                     _separador(),
