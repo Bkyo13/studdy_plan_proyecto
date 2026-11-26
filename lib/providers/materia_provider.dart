@@ -24,18 +24,41 @@ class MateriaProvider extends ChangeNotifier {
     return null;
   }
 
+  /// Revisa nombre vacío, largo y repetido. [idActual] es la materia que se
+  /// está editando (para que no choque consigo misma).
+  String? _validar(String nombre, {int? idActual}) {
+    final limpio = nombre.trim();
+    if (limpio.isEmpty) return 'Escribe el nombre de la materia';
+    if (limpio.length < 3) return 'Mínimo 3 caracteres';
+    if (limpio.length > 60) return 'Máximo 60 caracteres';
+    final repetida = _materias.any(
+      (m) => m.id != idActual && m.nombre.toLowerCase() == limpio.toLowerCase(),
+    );
+    if (repetida) return 'Esa materia ya existe';
+    return null;
+  }
+
   /// Devuelve null si se guardó, o el mensaje de error.
   String? agregar(String nombre, String color) {
-    final limpio = nombre.trim();
-    if (limpio.isEmpty) {
-      return 'Escribe el nombre de la materia';
-    }
-    final repetida =
-        _materias.any((m) => m.nombre.toLowerCase() == limpio.toLowerCase());
-    if (repetida) {
-      return 'Esa materia ya existe';
-    }
-    _materias.add(Materia(id: _siguienteId++, nombre: limpio, color: color));
+    final error = _validar(nombre);
+    if (error != null) return error;
+    _materias.add(Materia(id: _siguienteId++, nombre: nombre.trim(), color: color));
+    notifyListeners();
+    return null;
+  }
+
+  /// Cambia nombre y color. Las tareas guardan solo el id de la materia, así
+  /// que todas ven el cambio al instante. Devuelve null si se guardó.
+  String? actualizar({
+    required int id,
+    required String nombre,
+    required String color,
+  }) {
+    final i = _materias.indexWhere((m) => m.id == id);
+    if (i == -1) return 'La materia ya no existe';
+    final error = _validar(nombre, idActual: id);
+    if (error != null) return error;
+    _materias[i] = Materia(id: id, nombre: nombre.trim(), color: color);
     notifyListeners();
     return null;
   }

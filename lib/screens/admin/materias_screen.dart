@@ -5,6 +5,7 @@ import '../../providers/materia_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/color_hex.dart';
 import '../../widgets/boton_circular.dart';
+import '../../widgets/estado_vacio.dart';
 import 'materia_form_screen.dart';
 
 /// Lista de materias (lista secundaria de la entrega).
@@ -48,12 +49,21 @@ class MateriasScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              Text('${materias.length} materias registradas',
-                  style: AppText.cuerpo),
+              Text(
+                '${materias.length} materias registradas · toca una para editarla',
+                style: AppText.cuerpo,
+              ),
               const SizedBox(height: AppSpacing.entreSecciones),
               Expanded(
                 child: materias.isEmpty
-                    ? _estadoVacio()
+                    ? const Align(
+                        alignment: Alignment.topCenter,
+                        child: EstadoVacio(
+                          icono: Icons.menu_book_outlined,
+                          titulo: 'No hay materias registradas',
+                          mensaje: 'Agrega la primera con el botón +.',
+                        ),
+                      )
                     : ListView.separated(
                         padding: const EdgeInsets.only(bottom: 88),
                         itemCount: materias.length,
@@ -62,28 +72,47 @@ class MateriasScreen extends StatelessWidget {
                         itemBuilder: (context, i) {
                           final m = materias[i];
                           return Container(
-                            padding: const EdgeInsets.all(
-                              AppSpacing.interiorTarjeta,
-                            ),
                             decoration: AppDecor.tarjeta(),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 16,
-                                  height: 16,
-                                  decoration: BoxDecoration(
-                                    color: colorDesdeHex(m.color),
-                                    shape: BoxShape.circle,
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(AppRadius.tarjeta),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(AppRadius.tarjeta),
+                                onTap: () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => MateriaFormScreen(materia: m),
                                   ),
                                 ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Text(
-                                    m.nombre,
-                                    style: AppText.tituloTarjeta,
+                                child: Padding(
+                                  padding: const EdgeInsets.all(
+                                    AppSpacing.interiorTarjeta,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        width: 16,
+                                        height: 16,
+                                        decoration: BoxDecoration(
+                                          color: colorDesdeHex(m.color),
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Text(
+                                          m.nombre,
+                                          style: AppText.tituloTarjeta,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Icon(
+                                        Icons.edit_outlined,
+                                        color: AppColors.textoSuave,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
                           );
                         },
@@ -91,35 +120,6 @@ class MateriasScreen extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _estadoVacio() {
-    return Align(
-      alignment: Alignment.topCenter,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: AppDecor.tarjeta(),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: const [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: AppColors.verdeClaro,
-              child: Icon(Icons.inbox_outlined, color: AppColors.verde),
-            ),
-            SizedBox(height: 16),
-            Text('No hay materias registradas', style: AppText.tituloTarjeta),
-            SizedBox(height: 8),
-            Text(
-              'Agrega la primera con el botón +.',
-              textAlign: TextAlign.center,
-              style: AppText.cuerpo,
-            ),
-          ],
         ),
       ),
     );
