@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/materia.dart';
 import '../../models/tarea.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/color_hex.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_tarea.dart';
 import 'detalle_tarea_screen.dart';
@@ -23,6 +25,16 @@ class _InicioScreenState extends State<InicioScreen> {
   static const _limiteInicial = 3;
   bool _verTodas = false;
 
+  // Filtros (null = sin filtro). Se pueden combinar materia y prioridad.
+  int? _filtroMateria;
+  Prioridad? _filtroPrioridad;
+
+  bool get _hayFiltros => _filtroMateria != null || _filtroPrioridad != null;
+
+  bool _pasaFiltros(Tarea t) =>
+      (_filtroMateria == null || t.materiaId == _filtroMateria) &&
+      (_filtroPrioridad == null || t.prioridad == _filtroPrioridad);
+
   @override
   Widget build(BuildContext context) {
     final usuario = context.watch<AuthProvider>().usuarioActual;
@@ -33,9 +45,22 @@ class _InicioScreenState extends State<InicioScreen> {
 
     final nombre = usuario?.nombre ?? '';
     final inicial = nombre.isNotEmpty ? nombre[0].toUpperCase() : '?';
+    // Materias que aparecen en las pendientes del alumno (para los chips).
+    final idsMaterias = pendientes.map((t) => t.materiaId).toSet();
+    final materiasConTareas = materias.materias
+        .where((m) => idsMaterias.contains(m.id))
+        .toList()
+      ..sort((a, b) => a.nombre.compareTo(b.nombre));
+
+    // Si la materia filtrada ya no tiene pendientes, el filtro se ignora.
+    if (_filtroMateria != null && !idsMaterias.contains(_filtroMateria)) {
+      _filtroMateria = null;
+    }
+
+    final filtradas = pendientes.where(_pasaFiltros).toList();
     // Las vencidas van en su propia sección, arriba y siempre completas.
-    final atrasadas = pendientes.where((t) => t.vencida).toList();
-    final aTiempo = pendientes.where((t) => !t.vencida).toList();
+    final atrasadas = filtradas.where((t) => t.vencida).toList();
+    final aTiempo = filtradas.where((t) => !t.vencida).toList();
     final hayMas = aTiempo.length > _limiteInicial;
     final visibles = (_verTodas || !hayMas)
         ? aTiempo
@@ -88,6 +113,10 @@ class _InicioScreenState extends State<InicioScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.entreSecciones),
+          if (pendientes.length >= 2) ...[
+            _filtros(materiasConTareas),
+            const SizedBox(height: AppSpacing.entreSecciones),
+          ],
           if (atrasadas.isNotEmpty) ...[
             Row(
               children: [
@@ -141,6 +170,12 @@ class _InicioScreenState extends State<InicioScreen> {
               titulo: 'No hay tareas pendientes',
               mensaje: 'Toca el botón + para agregar tu primera tarea.',
             )
+          else if (filtradas.isEmpty)
+            const EstadoVacio(
+              icono: Icons.filter_alt_off_outlined,
+              titulo: 'Ninguna tarea coincide',
+              mensaje: 'Prueba con otros filtros o quítalos.',
+            )
           else if (aTiempo.isEmpty)
             const EstadoVacio(
               titulo: 'Nada más por ahora',
@@ -161,6 +196,80 @@ class _InicioScreenState extends State<InicioScreen> {
             ],
         ],
       ),
+    );
+  }
+
+  /// Fila de chips: prioridades, materias y "Quitar filtros".
+  Widget _filtros(List<Materia> materiasConTareas) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          if (_hayFiltros) ...[
+            ActionChip(
+              avatar: const Icon(Icons.close, size: 18, color: AppColors.peligro),
+              label: const Text('Quitar filtros'),
+              labelStyle: const TextStyle(
+                color: AppColors.peligro,
+                fontWeight: FontWeight.w600,
+              ),
+              backgroundColor: Colors.white,
+              side: const BorderSide(color: AppColors.borde),
+              onPressed: () => setState(() {
+                _filtroMateria = null;
+                _filtroPrioridad = null;
+              }),
+            ),
+            const SizedBox(width: 8),
+          ],
+          for (final p in Prioridad.values) ...[
+            _chip(
+              texto: p.name[0].toUpperCase() + p.name.substring(1),
+              color: AppColors.paraPrioridad(p),
+              seleccionado: _filtroPrioridad == p,
+              onTap: () => setState(
+                () => _filtroPrioridad = _filtroPrioridad == p ? null : p,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          for (final m in materiasConTareas) ...[
+            _chip(
+              texto: m.nombre,
+              color: colorDesdeHex(m.color),
+              seleccionado: _filtroMateria == m.id,
+              onTap: () => setState(
+                () => _filtroMateria = _filtroMateria == m.id ? null : m.id,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _chip({
+    required String texto,
+    required Color color,
+    required bool seleccionado,
+    required VoidCallback onTap,
+  }) {
+    return FilterChip(
+      avatar: CircleAvatar(radius: 6, backgroundColor: color),
+      label: Text(texto),
+      labelStyle: TextStyle(
+        color: seleccionado ? AppColors.verde : AppColors.textoSuave,
+        fontWeight: seleccionado ? FontWeight.w700 : FontWeight.w500,
+      ),
+      selected: seleccionado,
+      showCheckmark: false,
+      selectedColor: AppColors.verdeClaro,
+      backgroundColor: Colors.white,
+      side: BorderSide(
+        color: seleccionado ? AppColors.verde : AppColors.borde,
+      ),
+      onSelected: (_) => onTap(),
     );
   }
 }
