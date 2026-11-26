@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_theme.dart';
+import 'calendario_screen.dart';
 import 'completadas_screen.dart';
 import 'inicio_screen.dart';
 import 'logros_screen.dart';
 import 'nueva_tarea_screen.dart';
 
-/// Dashboard del Estudiante: barra inferior con Inicio, Completadas y Logros.
+/// Dashboard del Estudiante: barra inferior con Inicio, Calendario,
+/// Completadas y Logros.
 class EstudianteHome extends StatefulWidget {
   const EstudianteHome({super.key});
 
@@ -24,9 +26,10 @@ class _EstudianteHomeState extends State<EstudianteHome> {
         index: _indice,
         children: [
           const InicioScreen(),
+          const CalendarioScreen(),
           const CompletadasScreen(),
           // Se crea cada vez que se abre la pestaña, para revisar logros nuevos.
-          if (_indice == 2) const LogrosScreen() else const SizedBox.shrink(),
+          if (_indice == 3) const LogrosScreen() else const SizedBox.shrink(),
         ],
       ),
       floatingActionButton: _indice == 0
@@ -58,6 +61,10 @@ class _EstudianteHomeState extends State<EstudianteHome> {
             BottomNavigationBarItem(
               icon: Icon(Icons.home_outlined),
               label: 'Inicio',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.calendar_month_outlined),
+              label: 'Calendario',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.check_circle_outline),

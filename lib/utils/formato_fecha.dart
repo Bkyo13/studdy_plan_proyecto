@@ -83,3 +83,14 @@ const _mesesLargos = [
 String formatoFechaLarga(DateTime fecha) {
   return '${fecha.day} de ${_mesesLargos[fecha.month - 1]} de ${fecha.year}, ${_hora(fecha)}';
 }
+
+/// "Noviembre 2026" (encabezado del calendario).
+String formatoMesAnio(DateTime fecha) {
+  final mes = _mesesLargos[fecha.month - 1];
+  return '${mes[0].toUpperCase()}${mes.substring(1)} ${fecha.year}';
+}
+
+/// "Miércoles 25 de noviembre" (día elegido en el calendario).
+String formatoDiaLargo(DateTime fecha) {
+  return '${_dias[fecha.weekday - 1]} ${fecha.day} de ${_mesesLargos[fecha.month - 1]}';
+}
