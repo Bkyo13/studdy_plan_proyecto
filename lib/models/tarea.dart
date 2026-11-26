@@ -24,4 +24,8 @@ class Tarea {
     this.estado = Estado.pendiente,
     this.fechaCompletada,
   });
+
+  /// Sigue pendiente y ya pasó su fecha y hora de entrega.
+  bool get vencida =>
+      estado == Estado.pendiente && fechaEntrega.isBefore(DateTime.now());
 }

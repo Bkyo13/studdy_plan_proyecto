@@ -39,13 +39,20 @@ int _diasDesdeHoy(DateTime fecha) {
   return dia.difference(hoy).inDays;
 }
 
-/// "Hoy, 14:00", "Mañana, 14:00" o "Viernes 18, 23:59".
+/// "Hoy, 14:00", "Mañana, 14:00", "Ayer, 23:59", "Viernes 18, 23:59"
+/// (dentro de la próxima semana) o "18 Dic, 23:59" (más lejos o ya pasada).
+/// Si la fecha es de otro año se agrega el año: "18 Ene 2027, 23:59".
 String formatoEntrega(DateTime fecha) {
   final diff = _diasDesdeHoy(fecha);
   if (diff == 0) return 'Hoy, ${_hora(fecha)}';
   if (diff == 1) return 'Mañana, ${_hora(fecha)}';
-  final nombreDia = _dias[fecha.weekday - 1];
-  return '$nombreDia ${fecha.day}, ${_hora(fecha)}';
+  if (diff == -1) return 'Ayer, ${_hora(fecha)}';
+  if (diff > 1 && diff <= 6) {
+    final nombreDia = _dias[fecha.weekday - 1];
+    return '$nombreDia ${fecha.day}, ${_hora(fecha)}';
+  }
+  final anio = fecha.year == DateTime.now().year ? '' : ' ${fecha.year}';
+  return '${fecha.day} ${_meses[fecha.month - 1]}$anio, ${_hora(fecha)}';
 }
 
 /// "Hoy", "Ayer", "Hace 3 días" u "Oct 12".

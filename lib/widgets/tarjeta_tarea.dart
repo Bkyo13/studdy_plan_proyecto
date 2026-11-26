@@ -44,6 +44,7 @@ class TarjetaTarea extends StatelessWidget {
   }
 
   Widget _contenidoPendiente(String nombreMateria) {
+    final vencida = tarea.vencida;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -66,16 +67,23 @@ class TarjetaTarea extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            const Icon(
-              Icons.calendar_today_outlined,
+            Icon(
+              vencida ? Icons.error_outline : Icons.calendar_today_outlined,
               size: 18,
-              color: AppColors.textoSuave,
+              color: vencida ? AppColors.peligro : AppColors.textoSuave,
             ),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
-                'Entrega: ${formatoEntrega(tarea.fechaEntrega)}',
-                style: AppText.cuerpo,
+                vencida
+                    ? 'Vencida: ${formatoEntrega(tarea.fechaEntrega)}'
+                    : 'Entrega: ${formatoEntrega(tarea.fechaEntrega)}',
+                style: vencida
+                    ? AppText.cuerpo.copyWith(
+                        color: AppColors.peligro,
+                        fontWeight: FontWeight.w600,
+                      )
+                    : AppText.cuerpo,
               ),
             ),
           ],
