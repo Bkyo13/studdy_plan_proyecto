@@ -3,9 +3,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../models/sesion.dart';
-import '../models/token_recuperacion.dart';
-import '../models/usuario.dart';
+import '../../../models/sesion.dart';
+import '../../../models/token_recuperacion.dart';
+import '../../../models/usuario.dart';
 
 /// Maneja la sesión y los usuarios (en memoria, solo para la demo).
 ///
@@ -13,6 +13,13 @@ import '../models/usuario.dart';
 /// (shared_preferences). Al abrir la app se verifica que el token exista, que
 /// no haya vencido y que pertenezca a un usuario existente.
 class AuthProvider extends ChangeNotifier {
+  /// Mensajes de consola solo mientras se desarrolla (flutter run).
+  /// En la app publicada (modo release) no se imprime nada, para no dejar
+  /// datos de la sesión en los registros del teléfono.
+  static void _log(String mensaje) {
+    if (kDebugMode) debugPrint(mensaje);
+  }
+
   static const _claveToken = 'sesion_token';
   static const _claveUsuario = 'sesion_usuario_id';
   static const _claveCreada = 'sesion_creada';
@@ -92,7 +99,7 @@ class AuthProvider extends ChangeNotifier {
       final expira = DateTime.tryParse(prefs.getString(_claveExpira) ?? '');
 
       if (token == null || usuarioId == null || creada == null || expira == null) {
-        debugPrint('[Sesion] No hay token guardado: se mostrará el login.');
+        _log('[Sesion] No hay token guardado: se mostrará el login.');
         return false;
       }
 
@@ -104,14 +111,14 @@ class AuthProvider extends ChangeNotifier {
       );
 
       if (!sesion.vigente) {
-        debugPrint('[Sesion] Token vencido (expiró el $expira): se borra y se muestra el login.');
+        _log('[Sesion] Token vencido (expiró el $expira): se borra y se muestra el login.');
         await _borrarSesionGuardada();
         return false;
       }
 
       final usuario = porId(usuarioId);
       if (usuario == null) {
-        debugPrint('[Sesion] El token pertenece a un usuario que ya no existe: se borra.');
+        _log('[Sesion] El token pertenece a un usuario que ya no existe: se borra.');
         await _borrarSesionGuardada();
         return false;
       }
@@ -120,13 +127,13 @@ class AuthProvider extends ChangeNotifier {
       _usuarioActual = usuario;
       _sesionRecordada = true;
       notifyListeners();
-      debugPrint(
-        '[Sesion] Token válido (${token.substring(0, 8)}…) para ${usuario.correo}. '
+      _log(
+        '[Sesion] Token válido (${token.substring(0, 8)}…) para el usuario ${usuario.id}. '
         'Expira el $expira.',
       );
       return true;
     } catch (e) {
-      debugPrint('[Sesion] Error al verificar el token: $e');
+      _log('[Sesion] Error al verificar el token: $e');
       return false;
     }
   }
@@ -138,10 +145,10 @@ class AuthProvider extends ChangeNotifier {
       await prefs.setInt(_claveUsuario, sesion.usuarioId);
       await prefs.setString(_claveCreada, sesion.fechaCreacion.toIso8601String());
       await prefs.setString(_claveExpira, sesion.fechaExpiracion.toIso8601String());
-      debugPrint('[Sesion] Token guardado (${sesion.token.substring(0, 8)}…), '
+      _log('[Sesion] Token guardado (${sesion.token.substring(0, 8)}…), '
           'expira el ${sesion.fechaExpiracion}.');
     } catch (e) {
-      debugPrint('[Sesion] No se pudo guardar el token: $e');
+      _log('[Sesion] No se pudo guardar el token: $e');
     }
   }
 
@@ -153,7 +160,7 @@ class AuthProvider extends ChangeNotifier {
       await prefs.remove(_claveCreada);
       await prefs.remove(_claveExpira);
     } catch (e) {
-      debugPrint('[Sesion] No se pudo borrar el token: $e');
+      _log('[Sesion] No se pudo borrar el token: $e');
     }
   }
 
@@ -180,11 +187,14 @@ class AuthProvider extends ChangeNotifier {
     String contrasena, {
     bool recordarme = false,
   }) {
+    // Mismo mensaje si el correo no existe o si la contraseña está mal, para
+    // no revelar qué correos tienen cuenta en StudyPlan.
+    const errorGenerico = 'Correo o contraseña incorrectos';
     final buscado = correo.trim().toLowerCase();
     for (final u in _usuarios) {
       if (u.correo.toLowerCase() == buscado) {
         if (u.contrasena != contrasena) {
-          return 'Contraseña incorrecta';
+          return errorGenerico;
         }
         _usuarioActual = u;
         _sesion = _nuevaSesion(u.id);
@@ -198,7 +208,7 @@ class AuthProvider extends ChangeNotifier {
         return null;
       }
     }
-    return 'No existe una cuenta con ese correo';
+    return errorGenerico;
   }
 
   /// Crea la cuenta e inicia sesión. Devuelve null si salió bien.
@@ -235,7 +245,7 @@ class AuthProvider extends ChangeNotifier {
     _sesionRecordada = false;
     notifyListeners();
     _borrarSesionGuardada();
-    debugPrint('[Sesion] Sesión cerrada y token eliminado.');
+    _log('[Sesion] Sesión cerrada y token eliminado.');
   }
 
   // ---------------------------------------------------------------------
@@ -280,7 +290,7 @@ class AuthProvider extends ChangeNotifier {
       return 'La contraseña actual no es correcta';
     }
     _reemplazarUsuario(usuario.copyWith(contrasena: nueva));
-    debugPrint('[Cuenta] Contraseña actualizada para ${usuario.correo}.');
+    _log('[Cuenta] Contraseña actualizada para el usuario ${usuario.id}.');
     return null;
   }
 
@@ -296,7 +306,7 @@ class AuthProvider extends ChangeNotifier {
     _sesionRecordada = false;
     notifyListeners();
     _borrarSesionGuardada();
-    debugPrint('[Cuenta] Cuenta eliminada: ${usuario.correo}.');
+    _log('[Cuenta] Cuenta eliminada: usuario ${usuario.id}.');
   }
 
   // ---------------------------------------------------------------------
@@ -318,7 +328,7 @@ class AuthProvider extends ChangeNotifier {
   String? solicitarRecuperacion(String correo) {
     final usuario = _buscarPorCorreo(correo);
     if (usuario == null) {
-      debugPrint('[Recuperacion] No existe una cuenta con el correo $correo.');
+      _log('[Recuperacion] No existe una cuenta con ese correo.');
       return null;
     }
     // Los códigos anteriores de esa cuenta dejan de servir.
@@ -334,7 +344,7 @@ class AuthProvider extends ChangeNotifier {
         fechaExpiracion: DateTime.now().add(_duracionCodigo),
       ),
     );
-    debugPrint('[Recuperacion] Código generado para ${usuario.correo}; vence en 10 minutos.');
+    _log('[Recuperacion] Código generado para el usuario ${usuario.id}; vence en 10 minutos.');
     return codigo;
   }
 
@@ -362,7 +372,7 @@ class AuthProvider extends ChangeNotifier {
 
     token.usado = true;
     _reemplazarUsuario(usuario.copyWith(contrasena: nuevaContrasena));
-    debugPrint('[Recuperacion] Contraseña actualizada para ${usuario.correo}.');
+    _log('[Recuperacion] Contraseña actualizada para el usuario ${usuario.id}.');
     return null;
   }
 

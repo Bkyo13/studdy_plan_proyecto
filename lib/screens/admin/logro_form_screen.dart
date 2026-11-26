@@ -7,6 +7,7 @@ import '../../providers/logro_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
+import '../../utils/validadores.dart';
 
 /// Formulario del Administrador: crea un logro o edita uno existente.
 class LogroFormScreen extends StatefulWidget {
@@ -104,8 +105,10 @@ class _LogroFormScreenState extends State<LogroFormScreen> {
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _nombreCtrl,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(Limites.nombreLogro),
+                          ],
                           textCapitalization: TextCapitalization.sentences,
-                          inputFormatters: [LengthLimitingTextInputFormatter(60)],
                           validator: (v) {
                             final t = (v ?? '').trim();
                             if (t.isEmpty) return 'Escribe el nombre';
@@ -119,9 +122,9 @@ class _LogroFormScreenState extends State<LogroFormScreen> {
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _descripcionCtrl,
+                          maxLength: Limites.descripcionLogro,
                           maxLines: 3,
                           textCapitalization: TextCapitalization.sentences,
-                          inputFormatters: [LengthLimitingTextInputFormatter(150)],
                           validator: (v) => (v ?? '').trim().isEmpty
                               ? 'Escribe una descripción'
                               : null,

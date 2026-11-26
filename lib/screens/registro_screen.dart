@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../models/usuario.dart';
@@ -92,6 +93,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nombreCtrl,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(Limites.nombreUsuario),
+                      ],
                       textInputAction: TextInputAction.next,
                       textCapitalization: TextCapitalization.words,
                       validator: validarNombre,
@@ -105,6 +109,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _correoCtrl,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(Limites.correo),
+                      ],
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       validator: validarCorreo,
@@ -118,6 +125,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _passwordCtrl,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(Limites.contrasena),
+                      ],
                       obscureText: _ocultarPassword,
                       textInputAction: TextInputAction.next,
                       validator: validarPassword,
@@ -142,6 +152,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _confirmarCtrl,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(Limites.contrasena),
+                      ],
                       obscureText: _ocultarPassword,
                       validator: (v) {
                         if ((v ?? '').isEmpty) return 'Confirma tu contraseña';

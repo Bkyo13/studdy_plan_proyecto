@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/materia.dart';
@@ -10,6 +11,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/formato_fecha.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
+import '../../utils/validadores.dart';
 
 /// Formulario del Estudiante: crea una tarea nueva o edita una existente.
 class NuevaTareaScreen extends StatefulWidget {
@@ -169,6 +171,9 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _nombreCtrl,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(Limites.nombreTarea),
+                          ],
                           textCapitalization: TextCapitalization.sentences,
                           validator: (v) => (v ?? '').trim().isEmpty
                               ? 'Escribe el nombre de la tarea'
@@ -186,6 +191,7 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _descripcionCtrl,
+                          maxLength: Limites.descripcionTarea,
                           maxLines: 5,
                           textCapitalization: TextCapitalization.sentences,
                           decoration: AppDecor.campo(

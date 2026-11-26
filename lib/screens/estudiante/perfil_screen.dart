@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
@@ -215,6 +216,9 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _nombreCtrl,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(Limites.nombreUsuario),
+                      ],
                       textCapitalization: TextCapitalization.words,
                       textInputAction: TextInputAction.next,
                       validator: validarNombre,
@@ -228,6 +232,9 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _correoCtrl,
+                      inputFormatters: [
+                        LengthLimitingTextInputFormatter(Limites.correo),
+                      ],
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
                       validator: validarCorreo,
@@ -321,6 +328,9 @@ class _PerfilScreenState extends State<PerfilScreen> {
       const SizedBox(height: 8),
       TextFormField(
         controller: _actualCtrl,
+        inputFormatters: [
+          LengthLimitingTextInputFormatter(Limites.contrasena),
+        ],
         obscureText: _ocultarPassword,
         textInputAction: TextInputAction.next,
         validator: (v) => _tocaPassword && (v ?? '').isEmpty
@@ -337,6 +347,9 @@ class _PerfilScreenState extends State<PerfilScreen> {
       const SizedBox(height: 8),
       TextFormField(
         controller: _nuevaCtrl,
+        inputFormatters: [
+          LengthLimitingTextInputFormatter(Limites.contrasena),
+        ],
         obscureText: _ocultarPassword,
         textInputAction: TextInputAction.next,
         validator: (v) {
@@ -356,6 +369,9 @@ class _PerfilScreenState extends State<PerfilScreen> {
       const SizedBox(height: 8),
       TextFormField(
         controller: _confirmarCtrl,
+        inputFormatters: [
+          LengthLimitingTextInputFormatter(Limites.contrasena),
+        ],
         obscureText: _ocultarPassword,
         validator: (v) {
           if (!_tocaPassword) return null;

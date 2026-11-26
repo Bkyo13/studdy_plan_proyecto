@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/materia_provider.dart';
@@ -6,6 +7,7 @@ import '../../theme/app_theme.dart';
 import '../../utils/color_hex.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
+import '../../utils/validadores.dart';
 
 /// Formulario del Administrador: crea una materia nueva.
 class MateriaFormScreen extends StatefulWidget {
@@ -80,6 +82,9 @@ class _MateriaFormScreenState extends State<MateriaFormScreen> {
                         const SizedBox(height: 8),
                         TextFormField(
                           controller: _nombreCtrl,
+                          inputFormatters: [
+                            LengthLimitingTextInputFormatter(Limites.nombreMateria),
+                          ],
                           textCapitalization: TextCapitalization.sentences,
                           validator: (v) {
                             final texto = (v ?? '').trim();

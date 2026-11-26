@@ -21,3 +21,15 @@ String? validarNombre(String? valor) {
   if (texto.length < 3) return 'Mínimo 3 caracteres';
   return null;
 }
+
+/// Longitudes máximas de los campos de texto (las mismas del modelo de dominio).
+class Limites {
+  static const nombreUsuario = 50;
+  static const correo = 100;
+  static const contrasena = 60;
+  static const nombreTarea = 100;
+  static const descripcionTarea = 500;
+  static const nombreMateria = 60;
+  static const nombreLogro = 60;
+  static const descripcionLogro = 150;
+}
