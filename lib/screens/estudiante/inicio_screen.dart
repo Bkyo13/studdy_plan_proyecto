@@ -33,10 +33,13 @@ class _InicioScreenState extends State<InicioScreen> {
 
     final nombre = usuario?.nombre ?? '';
     final inicial = nombre.isNotEmpty ? nombre[0].toUpperCase() : '?';
-    final hayMas = pendientes.length > _limiteInicial;
+    // Las vencidas van en su propia sección, arriba y siempre completas.
+    final atrasadas = pendientes.where((t) => t.vencida).toList();
+    final aTiempo = pendientes.where((t) => !t.vencida).toList();
+    final hayMas = aTiempo.length > _limiteInicial;
     final visibles = (_verTodas || !hayMas)
-        ? pendientes
-        : pendientes.take(_limiteInicial).toList();
+        ? aTiempo
+        : aTiempo.take(_limiteInicial).toList();
 
     return SafeArea(
       child: ListView(
@@ -85,11 +88,37 @@ class _InicioScreenState extends State<InicioScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.entreSecciones),
+          if (atrasadas.isNotEmpty) ...[
+            Row(
+              children: [
+                const Icon(Icons.error_outline, color: AppColors.peligro),
+                const SizedBox(width: 8),
+                Text(
+                  'Atrasadas (${atrasadas.length})',
+                  style: AppText.tituloSeccion.copyWith(color: AppColors.peligro),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            for (final tarea in atrasadas) ...[
+              TarjetaTarea(
+                tarea: tarea,
+                materia: materias.porId(tarea.materiaId),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => DetalleTareaScreen(tareaId: tarea.id),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.entreTarjetas),
+            ],
+            const SizedBox(height: AppSpacing.entreSecciones - AppSpacing.entreTarjetas),
+          ],
           Row(
             children: [
               Expanded(
                 child: Text(
-                  'Tareas pendientes (${pendientes.length})',
+                  'Tareas pendientes (${aTiempo.length})',
                   style: AppText.tituloSeccion,
                 ),
               ),
@@ -111,6 +140,11 @@ class _InicioScreenState extends State<InicioScreen> {
             const EstadoVacio(
               titulo: 'No hay tareas pendientes',
               mensaje: 'Toca el botón + para agregar tu primera tarea.',
+            )
+          else if (aTiempo.isEmpty)
+            const EstadoVacio(
+              titulo: 'Nada más por ahora',
+              mensaje: 'Ponte al día con las atrasadas y vas perfecto.',
             )
           else
             for (final tarea in visibles) ...[
