@@ -7,6 +7,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/vinculo_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/cerrar_sesion.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/estado_vacio.dart';
@@ -84,7 +85,7 @@ class TutorHome extends StatelessWidget {
                   const SizedBox(width: 12),
                   BotonCircular(
                     icono: Icons.logout,
-                    onPressed: () => context.read<AuthProvider>().cerrarSesion(),
+                    onPressed: () => confirmarCerrarSesion(context),
                   ),
                 ],
               ),
