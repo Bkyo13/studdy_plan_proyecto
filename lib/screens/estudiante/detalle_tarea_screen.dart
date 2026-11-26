@@ -59,8 +59,6 @@ class DetalleTareaScreen extends StatelessWidget {
       tarea.estudianteId,
       tareas.xpDe(tarea.estudianteId),
     );
-    mostrarMensaje(context, '¡Tarea completada! +${TareaProvider.xpPorTarea} XP');
-
     // Aviso al desbloquear uno o más logros.
     if (nuevos.isNotEmpty && context.mounted) {
       await showDialog<void>(
@@ -110,6 +108,19 @@ class DetalleTareaScreen extends StatelessWidget {
     }
 
     if (!context.mounted) return;
+    // El aviso va al final para que no lo tape el cuadro del logro.
+    mostrarMensaje(
+      context,
+      '¡Tarea completada! +${TareaProvider.xpPorTarea} XP',
+      accion: 'Deshacer',
+      onAccion: () => tareas.reabrir(tarea.id),
+    );
+    Navigator.of(context).pop();
+  }
+
+  void _reabrir(BuildContext context, Tarea tarea) {
+    context.read<TareaProvider>().reabrir(tarea.id);
+    mostrarMensaje(context, 'La tarea volvió a tus pendientes');
     Navigator.of(context).pop();
   }
 
@@ -276,6 +287,17 @@ class DetalleTareaScreen extends StatelessWidget {
                   style: AppDecor.botonPrimario(),
                   icon: const Icon(Icons.check_circle_outline),
                   label: const Text('Marcar como completada', style: AppText.boton),
+                ),
+                const SizedBox(height: 12),
+              ] else ...[
+                OutlinedButton.icon(
+                  onPressed: () => _reabrir(context, tarea),
+                  style: AppDecor.botonSecundario(),
+                  icon: const Icon(Icons.undo),
+                  label: const Text(
+                    'Marcar como pendiente',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
                 ),
                 const SizedBox(height: 12),
               ],

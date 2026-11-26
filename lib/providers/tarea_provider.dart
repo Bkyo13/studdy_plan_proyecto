@@ -191,6 +191,17 @@ class TareaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Regresa una tarea completada a pendiente (botón "Deshacer" o
+  /// "Marcar como pendiente"). El XP baja solo, porque se calcula a partir
+  /// de las tareas completadas.
+  void reabrir(int id) {
+    final tarea = porId(id);
+    if (tarea == null || tarea.estado == Estado.pendiente) return;
+    tarea.estado = Estado.pendiente;
+    tarea.fechaCompletada = null;
+    notifyListeners();
+  }
+
   /// Borra todas las tareas de un estudiante (al eliminar su cuenta).
   void eliminarDeEstudiante(int estudianteId) {
     _tareas.removeWhere((t) => t.estudianteId == estudianteId);

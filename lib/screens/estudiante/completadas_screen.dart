@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/insignia_xp.dart';
 import '../../widgets/tarjeta_tarea.dart';
+import 'detalle_tarea_screen.dart';
 
 /// Pestaña Completadas: historial, XP y banner de progreso (lista secundaria).
 class CompletadasScreen extends StatelessWidget {
@@ -67,6 +68,11 @@ class CompletadasScreen extends StatelessWidget {
               TarjetaTarea(
                 tarea: tarea,
                 materia: materias.porId(tarea.materiaId),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => DetalleTareaScreen(tareaId: tarea.id),
+                  ),
+                ),
               ),
               const SizedBox(height: AppSpacing.entreTarjetas),
             ],
