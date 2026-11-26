@@ -80,10 +80,28 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
     if (hora == null || !mounted) return;
 
     final elegida = DateTime(dia.year, dia.month, dia.day, hora.hour, hora.minute);
+    if (elegida.isBefore(DateTime.now())) {
+      mostrarMensaje(context, 'Esa hora ya pasó. Elige una hora posterior.',
+          error: true);
+      return;
+    }
     setState(() {
       _fecha = elegida;
       _fechaCtrl.text = formatoEntrega(elegida);
     });
+  }
+
+  /// La fecha es obligatoria y no puede haber pasado. Excepción: al editar una
+  /// tarea que ya estaba vencida, se permite guardar sin cambiarle la fecha
+  /// (por ejemplo, para corregir solo el nombre).
+  String? _validarFecha() {
+    final fecha = _fecha;
+    if (fecha == null) return 'Elige la fecha de entrega';
+    final sinCambios = _editando && fecha == widget.tarea!.fechaEntrega;
+    if (!sinCambios && fecha.isBefore(DateTime.now())) {
+      return 'La hora de entrega ya pasó';
+    }
+    return null;
   }
 
   void _guardar() {
@@ -181,8 +199,7 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
                           controller: _fechaCtrl,
                           readOnly: true,
                           onTap: _elegirFecha,
-                          validator: (_) =>
-                              _fecha == null ? 'Elige la fecha de entrega' : null,
+                          validator: (_) => _validarFecha(),
                           decoration: AppDecor.campo(
                             hint: 'Selecciona fecha y hora',
                             icono: Icons.calendar_today_outlined,
