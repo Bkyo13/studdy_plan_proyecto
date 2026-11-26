@@ -49,8 +49,8 @@ Así se cumple que el estado persista al navegar: el rol, las tareas y las lista
 
 ```bash
 # 1. Clonar el repositorio
-git clone [URL-DEL-REPOSITORIO]
-cd [CARPETA-DEL-PROYECTO]
+git clone 
+cd 
 
 # 2. Instalar las dependencias
 flutter pub get

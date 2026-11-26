@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "754287645731",
+    "project_id": "studyplan-d50e0",
+    "storage_bucket": "studyplan-d50e0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:754287645731:android:9b8a1cff5917ac78a04d96",
+        "android_client_info": {
+          "package_name": "com.diegohernandez.studyplan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAQo6IMjEdxDBxb6bqZ0NpgBgr953V-U9M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
