@@ -13,7 +13,7 @@ import '../estudiante/detalle_tarea_screen.dart';
 
 /// Lista de tareas del estudiante vinculado. Solo lectura, con filtro.
 class TareasEstudianteScreen extends StatefulWidget {
-  final int estudianteId;
+  final String estudianteId;
 
   const TareasEstudianteScreen({super.key, required this.estudianteId});
 

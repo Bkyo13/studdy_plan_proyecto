@@ -3,13 +3,13 @@ import 'enums.dart';
 export 'enums.dart';
 
 class Tarea {
-  final int id;
+  final String id;
   final String nombre;
   final String descripcion;
   final DateTime fechaEntrega;
   final Prioridad prioridad;
-  final int materiaId;
-  final int estudianteId;
+  final String materiaId;
+  final String estudianteId;
   Estado estado;
   DateTime? fechaCompletada;
 

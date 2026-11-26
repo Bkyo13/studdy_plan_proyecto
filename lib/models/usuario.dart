@@ -3,7 +3,7 @@ import 'enums.dart';
 export 'enums.dart';
 
 class Usuario {
-  final int id;
+  final String id;
   final String nombre;
   final String correo;
   final String contrasena;

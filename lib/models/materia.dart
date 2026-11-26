@@ -1,5 +1,5 @@
 class Materia {
-  final int id;
+  final String id;
   final String nombre;
   final String color; // formato '#RRGGBB'
 

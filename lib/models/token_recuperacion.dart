@@ -1,8 +1,8 @@
 /// Código temporal para restablecer la contraseña de un usuario.
 class TokenRecuperacion {
-  final int id;
+  final String id;
   final String token; // código de 6 dígitos
-  final int usuarioId;
+  final String usuarioId;
   final DateTime fechaExpiracion;
   bool usado;
 

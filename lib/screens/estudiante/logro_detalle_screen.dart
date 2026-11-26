@@ -10,7 +10,7 @@ import '../../widgets/boton_circular.dart';
 
 /// Detalle de un logro: requisito, progreso y fecha de obtención (si ya se alcanzó).
 class LogroDetalleScreen extends StatelessWidget {
-  final int logroId;
+  final String logroId;
 
   const LogroDetalleScreen({super.key, required this.logroId});
 

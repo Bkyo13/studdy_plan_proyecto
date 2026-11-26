@@ -1,6 +1,6 @@
 /// Logro del catálogo: se desbloquea al acumular cierta cantidad de XP.
 class Logro {
-  final int id;
+  final String id;
   final String nombre;
   final String descripcion;
   final int xpRequerido;
@@ -15,9 +15,9 @@ class Logro {
 
 /// Registro de que un estudiante obtuvo un logro, y cuándo.
 class EstudianteLogro {
-  final int id;
-  final int estudianteId;
-  final int logroId;
+  final String id;
+  final String estudianteId;
+  final String logroId;
   final DateTime fechaObtenido;
 
   const EstudianteLogro({

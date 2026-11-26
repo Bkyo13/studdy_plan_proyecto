@@ -30,7 +30,7 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
   late final TextEditingController _descripcionCtrl;
   late final TextEditingController _fechaCtrl;
 
-  int? _materiaId;
+  String? _materiaId;
   DateTime? _fecha;
   Prioridad _prioridad = Prioridad.alta;
 
@@ -250,7 +250,7 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
 
   /// Selector de materia con validación (usa FormField para poder validar).
   Widget _campoMateria(List<Materia> materias) {
-    return FormField<int>(
+    return FormField<String>(
       initialValue: _materiaId,
       validator: (v) => v == null ? 'Selecciona una materia' : null,
       builder: (state) {
@@ -264,7 +264,7 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
           ),
           isEmpty: state.value == null,
           child: DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
+            child: DropdownButton<String>(
               value: state.value,
               isExpanded: true,
               borderRadius: BorderRadius.circular(AppRadius.campo),
@@ -274,7 +274,7 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
               ),
               items: [
                 for (final m in materias)
-                  DropdownMenuItem<int>(
+                  DropdownMenuItem<String>(
                     value: m.id,
                     child: Text(m.nombre, overflow: TextOverflow.ellipsis),
                   ),

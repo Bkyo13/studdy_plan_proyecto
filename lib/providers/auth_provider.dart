@@ -3,9 +3,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../../models/sesion.dart';
-import '../../../models/token_recuperacion.dart';
-import '../../../models/usuario.dart';
+import '../models/sesion.dart';
+import '../models/token_recuperacion.dart';
+import '../models/usuario.dart';
 
 /// Maneja la sesión y los usuarios (en memoria, solo para la demo).
 ///
@@ -29,21 +29,21 @@ class AuthProvider extends ChangeNotifier {
 
   final List<Usuario> _usuarios = [
     const Usuario(
-      id: 1,
+      id: '1',
       nombre: 'Sofía',
       correo: 'sofia@demo.com',
       contrasena: '123456',
       rol: Rol.estudiante,
     ),
     const Usuario(
-      id: 2,
+      id: '2',
       nombre: 'Carmen Torres',
       correo: 'tutor@demo.com',
       contrasena: '123456',
       rol: Rol.tutor,
     ),
     const Usuario(
-      id: 3,
+      id: '3',
       nombre: 'Administrador',
       correo: 'admin@demo.com',
       contrasena: '123456',
@@ -78,7 +78,7 @@ class AuthProvider extends ChangeNotifier {
     return List.generate(32, (_) => azar.nextInt(16).toRadixString(16)).join();
   }
 
-  Sesion _nuevaSesion(int usuarioId) {
+  Sesion _nuevaSesion(String usuarioId) {
     final ahora = DateTime.now();
     return Sesion(
       token: _generarToken(),
@@ -94,7 +94,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(_claveToken);
-      final usuarioId = prefs.getInt(_claveUsuario);
+      final usuarioId = prefs.getString(_claveUsuario);
       final creada = DateTime.tryParse(prefs.getString(_claveCreada) ?? '');
       final expira = DateTime.tryParse(prefs.getString(_claveExpira) ?? '');
 
@@ -133,7 +133,10 @@ class AuthProvider extends ChangeNotifier {
       );
       return true;
     } catch (e) {
+      // Por ejemplo, un token guardado con un formato anterior: se borra
+      // para que no vuelva a fallar en cada arranque.
       _log('[Sesion] Error al verificar el token: $e');
+      await _borrarSesionGuardada();
       return false;
     }
   }
@@ -142,7 +145,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_claveToken, sesion.token);
-      await prefs.setInt(_claveUsuario, sesion.usuarioId);
+      await prefs.setString(_claveUsuario, sesion.usuarioId);
       await prefs.setString(_claveCreada, sesion.fechaCreacion.toIso8601String());
       await prefs.setString(_claveExpira, sesion.fechaExpiracion.toIso8601String());
       _log('[Sesion] Token guardado (${sesion.token.substring(0, 8)}…), '
@@ -224,7 +227,7 @@ class AuthProvider extends ChangeNotifier {
       return 'Ya existe una cuenta con ese correo';
     }
     final nuevo = Usuario(
-      id: _siguienteId++,
+      id: '${_siguienteId++}',
       nombre: nombre.trim(),
       correo: correoLimpio,
       contrasena: contrasena,
@@ -338,7 +341,7 @@ class AuthProvider extends ChangeNotifier {
     final codigo = (Random.secure().nextInt(900000) + 100000).toString();
     _tokensRecuperacion.add(
       TokenRecuperacion(
-        id: _siguienteTokenId++,
+        id: '${_siguienteTokenId++}',
         token: codigo,
         usuarioId: usuario.id,
         fechaExpiracion: DateTime.now().add(_duracionCodigo),
@@ -380,7 +383,7 @@ class AuthProvider extends ChangeNotifier {
   // Consultas
   // ---------------------------------------------------------------------
 
-  Usuario? porId(int id) {
+  Usuario? porId(String id) {
     for (final u in _usuarios) {
       if (u.id == id) return u;
     }

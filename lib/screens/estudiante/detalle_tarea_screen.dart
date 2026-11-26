@@ -16,7 +16,7 @@ import 'nueva_tarea_screen.dart';
 /// Detalle de una tarea: instrucciones, fecha, y acciones de completar/eliminar.
 /// Con [soloLectura] (vista del tutor) se ocultan todas las acciones.
 class DetalleTareaScreen extends StatelessWidget {
-  final int tareaId;
+  final String tareaId;
   final bool soloLectura;
 
   const DetalleTareaScreen({

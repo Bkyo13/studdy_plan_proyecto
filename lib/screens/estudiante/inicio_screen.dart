@@ -26,7 +26,7 @@ class _InicioScreenState extends State<InicioScreen> {
   bool _verTodas = false;
 
   // Filtros (null = sin filtro). Se pueden combinar materia y prioridad.
-  int? _filtroMateria;
+  String? _filtroMateria;
   Prioridad? _filtroPrioridad;
 
   bool get _hayFiltros => _filtroMateria != null || _filtroPrioridad != null;

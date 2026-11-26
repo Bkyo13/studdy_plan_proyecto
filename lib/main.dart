@@ -9,6 +9,7 @@ import 'providers/materia_provider.dart';
 import 'providers/tarea_provider.dart';
 import 'providers/vinculo_provider.dart';
 import 'screens/splash_screen.dart';
+import 'services/notificaciones_service.dart';
 import 'theme/app_theme.dart';
 
 /// Antes de dibujar la app se conecta con Firebase (proyecto StudyPlan).
@@ -19,6 +20,7 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await NotificacionesService.instancia.inicializar();
   runApp(const StudyPlanApp());
 }
 

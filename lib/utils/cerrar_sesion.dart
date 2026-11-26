@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../services/notificaciones_service.dart';
 import '../theme/app_theme.dart';
 
 /// Pregunta antes de cerrar la sesión y, si el usuario confirma, la cierra.
@@ -36,6 +37,8 @@ Future<bool> confirmarCerrarSesion(BuildContext context) async {
   // raíz para que AuthGate muestre el login.
   final auth = context.read<AuthProvider>();
   Navigator.of(context).popUntil((ruta) => ruta.isFirst);
+  // Los recordatorios son de esta cuenta: no deben llegarle a quien entre después.
+  NotificacionesService.instancia.cancelarTodas();
   auth.cerrarSesion();
   return true;
 }

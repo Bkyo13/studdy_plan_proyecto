@@ -1,7 +1,7 @@
 /// Sesión abierta de un usuario, identificada por un token.
 class Sesion {
   final String token;
-  final int usuarioId;
+  final String usuarioId;
   final DateTime fechaCreacion;
   final DateTime fechaExpiracion;
 

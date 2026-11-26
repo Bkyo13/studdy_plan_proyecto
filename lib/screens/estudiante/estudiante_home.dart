@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../../models/tarea.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/tarea_provider.dart';
+import '../../services/notificaciones_service.dart';
 import '../../theme/app_theme.dart';
 import 'calendario_screen.dart';
 import 'completadas_screen.dart';
@@ -18,6 +23,26 @@ class EstudianteHome extends StatefulWidget {
 
 class _EstudianteHomeState extends State<EstudianteHome> {
   int _indice = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Al entrar como estudiante: pedir permiso de notificaciones (solo la
+    // primera vez sale el aviso del sistema) y programar los recordatorios
+    // de sus tareas pendientes.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _prepararAvisos());
+  }
+
+  Future<void> _prepararAvisos() async {
+    final usuario = context.read<AuthProvider>().usuarioActual;
+    if (usuario == null) return;
+    final pendientes = context
+        .read<TareaProvider>()
+        .tareasDe(usuario.id, estado: Estado.pendiente);
+    final avisos = NotificacionesService.instancia;
+    await avisos.pedirPermiso();
+    await avisos.sincronizar(pendientes);
+  }
 
   @override
   Widget build(BuildContext context) {

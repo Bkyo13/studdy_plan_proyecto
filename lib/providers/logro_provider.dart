@@ -7,31 +7,31 @@ import '../models/logro.dart';
 class LogroProvider extends ChangeNotifier {
   final List<Logro> _logros = [
     const Logro(
-      id: 1,
+      id: '1',
       nombre: 'Primer paso',
       descripcion: 'Completa tu primera tarea.',
       xpRequerido: 10,
     ),
     const Logro(
-      id: 2,
+      id: '2',
       nombre: 'En marcha',
       descripcion: 'Acumula 30 XP completando tareas.',
       xpRequerido: 30,
     ),
     const Logro(
-      id: 3,
+      id: '3',
       nombre: 'Constante',
       descripcion: 'Acumula 50 XP completando tareas.',
       xpRequerido: 50,
     ),
     const Logro(
-      id: 4,
+      id: '4',
       nombre: 'Organizado',
       descripcion: 'Acumula 100 XP completando tareas.',
       xpRequerido: 100,
     ),
     const Logro(
-      id: 5,
+      id: '5',
       nombre: 'Maestro del tiempo',
       descripcion: 'Acumula 200 XP completando tareas.',
       xpRequerido: 200,
@@ -54,18 +54,18 @@ class LogroProvider extends ChangeNotifier {
   /// Sofía ya tiene 30 XP (3 tareas completadas), así que ya desbloqueó los
   /// dos primeros logros en las fechas en que llegó a 10 y a 30 XP.
   void _cargarDatosDeEjemplo() {
-    const sofiaId = 1;
+    const sofiaId = '1';
     _obtenidos.addAll([
       EstudianteLogro(
-        id: _siguienteObtenidoId++,
+        id: '${_siguienteObtenidoId++}',
         estudianteId: sofiaId,
-        logroId: 1,
+        logroId: '1',
         fechaObtenido: _enDias(-9, 11, 0),
       ),
       EstudianteLogro(
-        id: _siguienteObtenidoId++,
+        id: '${_siguienteObtenidoId++}',
         estudianteId: sofiaId,
-        logroId: 2,
+        logroId: '2',
         fechaObtenido: _enDias(-1, 18, 30),
       ),
     ]);
@@ -82,7 +82,7 @@ class LogroProvider extends ChangeNotifier {
     return lista;
   }
 
-  Logro? porId(int id) {
+  Logro? porId(String id) {
     for (final l in _logros) {
       if (l.id == id) return l;
     }
@@ -90,14 +90,14 @@ class LogroProvider extends ChangeNotifier {
   }
 
   /// Registro de obtención de un logro para un estudiante, o null si sigue bloqueado.
-  EstudianteLogro? obtenido(int estudianteId, int logroId) {
+  EstudianteLogro? obtenido(String estudianteId, String logroId) {
     for (final o in _obtenidos) {
       if (o.estudianteId == estudianteId && o.logroId == logroId) return o;
     }
     return null;
   }
 
-  int cantidadObtenidos(int estudianteId) {
+  int cantidadObtenidos(String estudianteId) {
     return _obtenidos.where((o) => o.estudianteId == estudianteId).length;
   }
 
@@ -106,20 +106,20 @@ class LogroProvider extends ChangeNotifier {
   // -------------------------------------------------------------------
 
   /// Borra los logros obtenidos por un estudiante (al eliminar su cuenta).
-  void eliminarDeEstudiante(int estudianteId) {
+  void eliminarDeEstudiante(String estudianteId) {
     _obtenidos.removeWhere((o) => o.estudianteId == estudianteId);
     notifyListeners();
   }
 
   /// Desbloquea los logros cuyo XP requerido ya se alcanzó y devuelve los que
   /// se desbloquearon en este momento (para avisarle al estudiante).
-  List<Logro> evaluar(int estudianteId, int xp) {
+  List<Logro> evaluar(String estudianteId, int xp) {
     final nuevos = <Logro>[];
     for (final logro in logros) {
       if (xp >= logro.xpRequerido && obtenido(estudianteId, logro.id) == null) {
         _obtenidos.add(
           EstudianteLogro(
-            id: _siguienteObtenidoId++,
+            id: '${_siguienteObtenidoId++}',
             estudianteId: estudianteId,
             logroId: logro.id,
             fechaObtenido: DateTime.now(),
@@ -137,7 +137,7 @@ class LogroProvider extends ChangeNotifier {
   // -------------------------------------------------------------------
 
   String? _validar({
-    int? idActual,
+    String? idActual,
     required String nombre,
     required String descripcion,
     required int xpRequerido,
@@ -170,7 +170,7 @@ class LogroProvider extends ChangeNotifier {
     if (error != null) return error;
     _logros.add(
       Logro(
-        id: _siguienteLogroId++,
+        id: '${_siguienteLogroId++}',
         nombre: nombre.trim(),
         descripcion: descripcion.trim(),
         xpRequerido: xpRequerido,
@@ -183,7 +183,7 @@ class LogroProvider extends ChangeNotifier {
   /// Devuelve null si se guardó, o el mensaje de error. Los logros que algún
   /// estudiante ya obtuvo se conservan aunque cambie el XP requerido.
   String? actualizar({
-    required int id,
+    required String id,
     required String nombre,
     required String descripcion,
     required int xpRequerido,

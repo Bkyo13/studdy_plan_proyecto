@@ -20,10 +20,10 @@ class TareaProvider extends ChangeNotifier {
   }
 
   void _cargarDatosDeEjemplo() {
-    const sofiaId = 1;
+    const sofiaId = '1';
     _tareas.addAll([
       Tarea(
-        id: _siguienteId++,
+        id: '${_siguienteId++}',
         nombre: 'Resolver problemario de derivadas',
         descripcion:
             'Completar los ejercicios del 1 al 15 de la sección 4.2 del libro de texto. '
@@ -31,57 +31,57 @@ class TareaProvider extends ChangeNotifier {
             'cadena aplicada en cada solución. Entregar en formato PDF.',
         fechaEntrega: _enDias(1, 14, 0),
         prioridad: Prioridad.alta,
-        materiaId: 1,
+        materiaId: '1',
         estudianteId: sofiaId,
       ),
       Tarea(
-        id: _siguienteId++,
+        id: '${_siguienteId++}',
         nombre: 'Rehacer todo el CSS de mi web',
         descripcion:
             'Reescribir los estilos del sitio con flexbox y variables de color.',
         fechaEntrega: _enDias(3, 23, 59),
         prioridad: Prioridad.media,
-        materiaId: 2,
+        materiaId: '2',
         estudianteId: sofiaId,
       ),
       Tarea(
-        id: _siguienteId++,
+        id: '${_siguienteId++}',
         nombre: 'Hacer las torres de hanoi',
         descripcion: 'Implementar la solución recursiva y probarla con 3 y 4 discos.',
         fechaEntrega: _enDias(5, 10, 0),
         prioridad: Prioridad.baja,
-        materiaId: 3,
+        materiaId: '3',
         estudianteId: sofiaId,
       ),
       Tarea(
-        id: _siguienteId++,
+        id: '${_siguienteId++}',
         nombre: 'Lectura de capítulos 1 y 2',
         descripcion: 'Leer los dos primeros capítulos y preparar un resumen.',
         fechaEntrega: _enDias(-1, 23, 59),
         prioridad: Prioridad.media,
-        materiaId: 4,
+        materiaId: '4',
         estudianteId: sofiaId,
         estado: Estado.completada,
         fechaCompletada: _enDias(-1, 18, 30),
       ),
       Tarea(
-        id: _siguienteId++,
+        id: '${_siguienteId++}',
         nombre: 'Maqueta de célula animal',
         descripcion: 'Maqueta con las partes principales de la célula, rotuladas.',
         fechaEntrega: _enDias(-3, 12, 0),
         prioridad: Prioridad.baja,
-        materiaId: 5,
+        materiaId: '5',
         estudianteId: sofiaId,
         estado: Estado.completada,
         fechaCompletada: _enDias(-3, 9, 15),
       ),
       Tarea(
-        id: _siguienteId++,
+        id: '${_siguienteId++}',
         nombre: 'Investigación de vectores',
         descripcion: 'Investigar operaciones con vectores y entregar un resumen de dos páginas.',
         fechaEntrega: _enDias(-9, 12, 0),
         prioridad: Prioridad.alta,
-        materiaId: 6,
+        materiaId: '6',
         estudianteId: sofiaId,
         estado: Estado.completada,
         fechaCompletada: _enDias(-9, 11, 0),
@@ -91,7 +91,7 @@ class TareaProvider extends ChangeNotifier {
 
   /// Tareas de un estudiante. Pendientes por fecha de entrega (la más próxima
   /// primero) y completadas de la más reciente a la más antigua.
-  List<Tarea> tareasDe(int estudianteId, {Estado? estado}) {
+  List<Tarea> tareasDe(String estudianteId, {Estado? estado}) {
     final lista = _tareas
         .where((t) =>
             t.estudianteId == estudianteId &&
@@ -108,33 +108,33 @@ class TareaProvider extends ChangeNotifier {
     return lista;
   }
 
-  Tarea? porId(int id) {
+  Tarea? porId(String id) {
     for (final t in _tareas) {
       if (t.id == id) return t;
     }
     return null;
   }
 
-  int contarPorEstado(int estudianteId, Estado estado) {
+  int contarPorEstado(String estudianteId, Estado estado) {
     return _tareas
         .where((t) => t.estudianteId == estudianteId && t.estado == estado)
         .length;
   }
 
   /// Tareas pendientes cuya fecha de entrega ya pasó.
-  int contarVencidas(int estudianteId) {
+  int contarVencidas(String estudianteId) {
     return _tareas
         .where((t) => t.estudianteId == estudianteId && t.vencida)
         .length;
   }
 
   /// XP total: puntos por cada tarea completada.
-  int xpDe(int estudianteId) {
+  int xpDe(String estudianteId) {
     return contarPorEstado(estudianteId, Estado.completada) * xpPorTarea;
   }
 
   /// Tareas completadas en los últimos 7 días (para el banner de progreso).
-  int completadasEnLaSemana(int estudianteId) {
+  int completadasEnLaSemana(String estudianteId) {
     final limite = DateTime.now().subtract(const Duration(days: 7));
     return _tareas
         .where((t) =>
@@ -150,11 +150,11 @@ class TareaProvider extends ChangeNotifier {
     required String descripcion,
     required DateTime fechaEntrega,
     required Prioridad prioridad,
-    required int materiaId,
-    required int estudianteId,
+    required String materiaId,
+    required String estudianteId,
   }) {
     _tareas.add(Tarea(
-      id: _siguienteId++,
+      id: '${_siguienteId++}',
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
       fechaEntrega: fechaEntrega,
@@ -166,12 +166,12 @@ class TareaProvider extends ChangeNotifier {
   }
 
   void actualizar({
-    required int id,
+    required String id,
     required String nombre,
     required String descripcion,
     required DateTime fechaEntrega,
     required Prioridad prioridad,
-    required int materiaId,
+    required String materiaId,
   }) {
     final i = _tareas.indexWhere((t) => t.id == id);
     if (i == -1) return;
@@ -190,7 +190,7 @@ class TareaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void completar(int id) {
+  void completar(String id) {
     final tarea = porId(id);
     if (tarea == null || tarea.estado == Estado.completada) return;
     tarea.estado = Estado.completada;
@@ -201,7 +201,7 @@ class TareaProvider extends ChangeNotifier {
   /// Regresa una tarea completada a pendiente (botón "Deshacer" o
   /// "Marcar como pendiente"). El XP baja solo, porque se calcula a partir
   /// de las tareas completadas.
-  void reabrir(int id) {
+  void reabrir(String id) {
     final tarea = porId(id);
     if (tarea == null || tarea.estado == Estado.pendiente) return;
     tarea.estado = Estado.pendiente;
@@ -210,12 +210,12 @@ class TareaProvider extends ChangeNotifier {
   }
 
   /// Borra todas las tareas de un estudiante (al eliminar su cuenta).
-  void eliminarDeEstudiante(int estudianteId) {
+  void eliminarDeEstudiante(String estudianteId) {
     _tareas.removeWhere((t) => t.estudianteId == estudianteId);
     notifyListeners();
   }
 
-  void eliminar(int id) {
+  void eliminar(String id) {
     _tareas.removeWhere((t) => t.id == id);
     notifyListeners();
   }

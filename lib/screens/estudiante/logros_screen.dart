@@ -46,7 +46,7 @@ class _LogrosScreenState extends State<LogrosScreen> {
     final logrosProvider = context.watch<LogroProvider>();
     final tareas = context.watch<TareaProvider>();
 
-    final estudianteId = usuario?.id ?? -1;
+    final estudianteId = usuario?.id ?? '';
     final xp = usuario == null ? 0 : tareas.xpDe(estudianteId);
     final todos = logrosProvider.logros;
     final obtenidos = todos
@@ -122,7 +122,7 @@ class _LogrosScreenState extends State<LogrosScreen> {
 
   List<Widget> _tarjetas(
     List logros,
-    int estudianteId,
+    String estudianteId,
     int xp,
     LogroProvider provider,
   ) {
