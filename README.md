@@ -67,7 +67,7 @@ La única dependencia externa es [`provider`](https://pub.dev/packages/provider)
 |--------|-----|
 | `sofia@demo.com` | Estudiante |
 | `tutor@demo.com` | Tutor |
-| `admin@demo.com` | Administrador |
+| `admin.studyplan@gmail.com` | Administrador |
 
 También se puede crear una cuenta nueva desde la pantalla de registro. El tutor empieza sin estudiante vinculado, para poder probar el formulario de vinculación con el correo `sofia@demo.com`.
 
