@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/tarea.dart';
-import '../../providers/logro_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/acciones_tarea.dart';
 import '../../utils/color_hex.dart';
 import '../../utils/formato_fecha.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
-import '../../widgets/dialogo_logro.dart';
 import '../../widgets/etiqueta_prioridad.dart';
 import 'asistente_screen.dart';
 import 'nueva_tarea_screen.dart';
@@ -59,30 +58,8 @@ class DetalleTareaScreen extends StatelessWidget {
   }
 
   Future<void> _completar(BuildContext context, Tarea tarea) async {
-    final tareas = context.read<TareaProvider>();
-    final logros = context.read<LogroProvider>();
-
-    final puntos = tareas.completar(tarea.id);
-    final nuevos = logros.evaluar(
-      tarea.estudianteId,
-      tareas.xpDe(tarea.estudianteId),
-    );
-    // Aviso al desbloquear uno o más logros.
-    if (nuevos.isNotEmpty && context.mounted) {
-      await mostrarLogrosDesbloqueados(context, nuevos);
-    }
-
-    if (!context.mounted) return;
-    // El aviso va al final para que no lo tape el cuadro del logro.
-    mostrarMensaje(
-      context,
-      puntos > 0
-          ? '¡Tarea completada! +$puntos XP'
-          : '¡Tarea completada! (sin XP: se completó muy rápido)',
-      accion: 'Deshacer',
-      onAccion: () => tareas.reabrir(tarea.id),
-    );
-    Navigator.of(context).pop();
+    await completarTarea(context, tarea);
+    if (context.mounted) Navigator.of(context).pop();
   }
 
   /// Abre el asistente con una conversación nueva enfocada en esta tarea.

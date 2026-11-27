@@ -7,9 +7,12 @@ import '../../providers/auth_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/acciones_tarea.dart';
 import '../../utils/color_hex.dart';
+import '../../utils/mensajes.dart';
 import '../../widgets/estado_vacio.dart';
-import '../../widgets/tarjeta_tarea.dart';
+import '../../widgets/insignia_xp.dart';
+import '../../widgets/tarjeta_deslizable.dart';
 import 'detalle_tarea_screen.dart';
 import 'perfil_screen.dart';
 
@@ -39,9 +42,11 @@ class _InicioScreenState extends State<InicioScreen> {
   Widget build(BuildContext context) {
     final usuario = context.watch<AuthProvider>().usuarioActual;
     final materias = context.watch<MateriaProvider>();
+    final tareas = context.watch<TareaProvider>();
     final pendientes = usuario == null
         ? <Tarea>[]
-        : context.watch<TareaProvider>().tareasDe(usuario.id, estado: Estado.pendiente);
+        : tareas.tareasDe(usuario.id, estado: Estado.pendiente);
+    final xp = usuario == null ? 0 : tareas.xpDe(usuario.id);
 
     final nombre = usuario?.nombre ?? '';
     final inicial = nombre.isNotEmpty ? nombre[0].toUpperCase() : '?';
@@ -88,6 +93,9 @@ class _InicioScreenState extends State<InicioScreen> {
                       '¡Hola, $nombre! Organiza tu día.',
                       style: AppText.cuerpo,
                     ),
+                    const SizedBox(height: 10),
+                    // Al completar deslizando, el número sube contando.
+                    InsigniaXp(xp: xp),
                   ],
                 ),
               ),
@@ -130,15 +138,7 @@ class _InicioScreenState extends State<InicioScreen> {
             ),
             const SizedBox(height: 12),
             for (final tarea in atrasadas) ...[
-              TarjetaTarea(
-                tarea: tarea,
-                materia: materias.porId(tarea.materiaId),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DetalleTareaScreen(tareaId: tarea.id),
-                  ),
-                ),
-              ),
+              _tarjeta(tarea, materias),
               const SizedBox(height: AppSpacing.entreTarjetas),
             ],
             const SizedBox(height: AppSpacing.entreSecciones - AppSpacing.entreTarjetas),
@@ -183,19 +183,31 @@ class _InicioScreenState extends State<InicioScreen> {
             )
           else
             for (final tarea in visibles) ...[
-              TarjetaTarea(
-                tarea: tarea,
-                materia: materias.porId(tarea.materiaId),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => DetalleTareaScreen(tareaId: tarea.id),
-                  ),
-                ),
-              ),
+              _tarjeta(tarea, materias),
               const SizedBox(height: AppSpacing.entreTarjetas),
             ],
         ],
       ),
+    );
+  }
+
+  /// Tarjeta que se desliza: → completar, ← eliminar. Usa el contexto de
+  /// esta pantalla (no el de la tarjeta, que desaparece al deslizarla).
+  Widget _tarjeta(Tarea tarea, MateriaProvider materias) {
+    return TarjetaDeslizable(
+      key: ValueKey(tarea.id),
+      tarea: tarea,
+      materia: materias.porId(tarea.materiaId),
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => DetalleTareaScreen(tareaId: tarea.id),
+        ),
+      ),
+      onCompletar: () => completarTarea(context, tarea),
+      onEliminar: () {
+        context.read<TareaProvider>().eliminar(tarea.id);
+        mostrarMensaje(context, 'Tarea eliminada');
+      },
     );
   }
 
