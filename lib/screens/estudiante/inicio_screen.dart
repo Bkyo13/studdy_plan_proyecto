@@ -17,6 +17,7 @@ import '../../widgets/estado_vacio.dart';
 import '../../widgets/insignia_xp.dart';
 import '../../widgets/tarjeta_deslizable.dart';
 import '../../widgets/tarjeta_esqueleto.dart';
+import '../../widgets/tarjeta_nivel.dart';
 import '../../widgets/tarjeta_solicitud_tutor.dart';
 import 'detalle_tarea_screen.dart';
 import 'perfil_screen.dart';
@@ -139,6 +140,11 @@ class _InicioScreenState extends State<InicioScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.entreSecciones),
+          // Nivel según el XP (no sale mientras cargan las tareas).
+          if (!tareas.cargando) ...[
+            TarjetaNivel(xp: xp),
+            const SizedBox(height: AppSpacing.entreTarjetas),
+          ],
           // Solicitudes de tutores que todavía no responde.
           for (final solicitud in solicitudes) ...[
             TarjetaSolicitudTutor(

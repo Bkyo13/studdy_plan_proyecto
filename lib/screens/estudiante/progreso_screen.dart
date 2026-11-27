@@ -11,6 +11,7 @@ import '../../utils/color_hex.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_dato.dart';
+import '../../widgets/tarjeta_nivel.dart';
 
 /// "Mi progreso": estadísticas del estudiante a partir de su historial de XP
 /// (RegistroXP). Las gráficas están hechas con widgets de Flutter (sin
@@ -92,6 +93,8 @@ class ProgresoScreen extends StatelessWidget {
                 mensaje: 'Completa tus primeras tareas y aquí verás tu avance.',
               )
             else ...[
+              TarjetaNivel(xp: xpTotal),
+              const SizedBox(height: AppSpacing.entreTarjetas),
               Row(
                 children: [
                   Expanded(
