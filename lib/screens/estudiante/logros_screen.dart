@@ -10,6 +10,7 @@ import '../../widgets/estado_vacio.dart';
 import '../../widgets/insignia_xp.dart';
 import '../../widgets/tarjeta_logro.dart';
 import 'logro_detalle_screen.dart';
+import 'progreso_screen.dart';
 
 /// Lista de logros: obtenidos y bloqueados, con su XP requerido y su progreso.
 class LogrosScreen extends StatefulWidget {
@@ -79,6 +80,19 @@ class _LogrosScreenState extends State<LogrosScreen> {
               const SizedBox(width: 12),
               InsigniaXp(xp: xp),
             ],
+          ),
+          const SizedBox(height: AppSpacing.entreSecciones),
+          // Estadísticas: XP por semana, entregas a tiempo y por materia.
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ProgresoScreen()),
+            ),
+            style: AppDecor.botonSecundario(),
+            icon: const Icon(Icons.insights_outlined),
+            label: const Text(
+              'Ver mi progreso',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
           ),
           const SizedBox(height: AppSpacing.entreSecciones),
           if (todos.isEmpty)
