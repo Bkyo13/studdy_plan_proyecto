@@ -97,12 +97,15 @@ class _EstudianteHomeState extends State<EstudianteHome> {
               ignoring: i != _indice,
               child: ExcludeSemantics(
                 excluding: i != _indice,
-                child: TickerMode(
-                  enabled: i == _indice,
-                  child: AnimatedOpacity(
-                    opacity: i == _indice ? 1 : 0,
-                    duration: duracion,
-                    curve: Animaciones.curva,
+                // El fundido va por fuera: así siempre termina de animarse.
+                // TickerMode (por dentro) solo pausa las animaciones propias
+                // de las pestañas ocultas.
+                child: AnimatedOpacity(
+                  opacity: i == _indice ? 1 : 0,
+                  duration: duracion,
+                  curve: Animaciones.curva,
+                  child: TickerMode(
+                    enabled: i == _indice,
                     child: pestanas[i],
                   ),
                 ),

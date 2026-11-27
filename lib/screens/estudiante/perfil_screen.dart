@@ -518,7 +518,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
     final avisos = NotificacionesService.instancia;
     return Container(
       decoration: AppDecor.tarjeta(),
-      child: Column(
+      // Material transparente dentro de la tarjeta: los renglones (ListTile)
+      // pintan su efecto al tocarlos sobre él, sin que el fondo lo tape.
+      child: Material(
+        type: MaterialType.transparency,
+        borderRadius: BorderRadius.circular(AppRadius.tarjeta),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
         children: [
           SwitchListTile(
             value: avisos.activos,
@@ -616,6 +622,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
