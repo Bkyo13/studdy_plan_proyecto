@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../services/notificaciones_service.dart';
 import '../../theme/app_theme.dart';
+import 'asistente_screen.dart';
 import 'calendario_screen.dart';
 import 'completadas_screen.dart';
 import 'inicio_screen.dart';
@@ -54,6 +55,7 @@ class _EstudianteHomeState extends State<EstudianteHome> {
           const CompletadasScreen(),
           // Se crea cada vez que se abre la pestaña, para revisar logros nuevos.
           if (_indice == 3) const LogrosScreen() else const SizedBox.shrink(),
+          const AsistenteScreen(),
         ],
       ),
       floatingActionButton: _indice == 0
@@ -97,6 +99,10 @@ class _EstudianteHomeState extends State<EstudianteHome> {
             BottomNavigationBarItem(
               icon: Icon(Icons.emoji_events_outlined),
               label: 'Logros',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.auto_awesome_outlined),
+              label: 'Asistente',
             ),
           ],
         ),
