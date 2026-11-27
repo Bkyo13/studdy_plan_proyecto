@@ -18,7 +18,7 @@ class LogoApp extends StatelessWidget {
         borderRadius: BorderRadius.circular(tamano * 0.3),
       ),
       child: Icon(
-        Icons.menu_book_outlined,
+        Icons.menu_book,
         color: AppColors.verde,
         size: tamano * 0.5,
       ),
