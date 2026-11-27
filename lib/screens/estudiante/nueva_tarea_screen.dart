@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../models/materia.dart';
 import '../../models/tarea.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/feriado_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
@@ -12,6 +13,7 @@ import '../../utils/formato_fecha.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
 import '../../utils/validadores.dart';
+import '../../widgets/aviso_feriado.dart';
 
 /// Formulario del Estudiante: crea una tarea nueva o edita una existente.
 class NuevaTareaScreen extends StatefulWidget {
@@ -91,6 +93,8 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
       _fecha = elegida;
       _fechaCtrl.text = formatoEntrega(elegida);
     });
+    // Por si la fecha es de otro año (los feriados se cargan por año).
+    context.read<FeriadoProvider>().cargar(elegida.year);
   }
 
   /// La fecha es obligatoria y no puede haber pasado. Excepción: al editar una
@@ -137,6 +141,10 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final feriados = context.watch<FeriadoProvider>();
+    final fechaElegida = _fecha;
+    final feriado =
+        fechaElegida == null ? null : feriados.feriadoEn(fechaElegida);
     final materias = context.watch<MateriaProvider>().materias;
 
     return Scaffold(
@@ -215,6 +223,13 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
                             ),
                           ),
                         ),
+                        if (feriado != null) ...[
+                          const SizedBox(height: 10),
+                          AvisoFeriado(
+                            introduccion: 'Ojo: tu fecha de entrega cae en día feriado,',
+                            nombreFeriado: feriado,
+                          ),
+                        ],
                         const SizedBox(height: 20),
                         const Text('Prioridad', style: AppText.labelCampo),
                         const SizedBox(height: 8),

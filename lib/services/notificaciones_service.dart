@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/tarea.dart';
@@ -22,6 +23,43 @@ class NotificacionesService {
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _listo = false;
 
+  // Ajustes del usuario (se guardan en el teléfono, en "Mi perfil").
+  static const _claveActivos = 'avisos_activos';
+  static const _claveUnDia = 'aviso_un_dia';
+  static const _claveUnaHora = 'aviso_una_hora';
+  bool _activos = true;
+  bool _unDia = true;
+  bool _unaHora = true;
+
+  /// Si el usuario quiere recibir recordatorios.
+  bool get activos => _activos;
+
+  /// Aviso 1 día antes de la entrega.
+  bool get unDiaAntes => _unDia;
+
+  /// Aviso 1 hora antes de la entrega.
+  bool get unaHoraAntes => _unaHora;
+
+  /// Guarda los ajustes. Después hay que llamar a [sincronizar] para que los
+  /// avisos ya programados se ajusten.
+  Future<void> cambiarAjustes({
+    bool? activos,
+    bool? unDiaAntes,
+    bool? unaHoraAntes,
+  }) async {
+    _activos = activos ?? _activos;
+    _unDia = unDiaAntes ?? _unDia;
+    _unaHora = unaHoraAntes ?? _unaHora;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_claveActivos, _activos);
+      await prefs.setBool(_claveUnDia, _unDia);
+      await prefs.setBool(_claveUnaHora, _unaHora);
+    } catch (e) {
+      if (kDebugMode) debugPrint('[Notificaciones] No se guardaron los ajustes: $e');
+    }
+  }
+
   static const _canal = AndroidNotificationDetails(
     'recordatorios_entregas',
     'Recordatorios de entregas',
@@ -42,6 +80,11 @@ class NotificacionesService {
   Future<void> inicializar() async {
     if (!_soportado || _listo) return;
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _activos = prefs.getBool(_claveActivos) ?? true;
+      _unDia = prefs.getBool(_claveUnDia) ?? true;
+      _unaHora = prefs.getBool(_claveUnaHora) ?? true;
+
       const ajustes = InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(
@@ -80,21 +123,25 @@ class NotificacionesService {
   Future<void> programarTarea(Tarea tarea) async {
     if (!_soportado || !_listo) return;
     await cancelarTarea(tarea.id);
-    if (tarea.estado != Estado.pendiente) return;
+    if (!_activos || tarea.estado != Estado.pendiente) return;
 
     final entrega = tarea.fechaEntrega;
-    await _programar(
-      id: _idAviso(tarea.id, 0),
-      cuando: entrega.subtract(const Duration(days: 1)),
-      titulo: '📚 Mañana se entrega una tarea',
-      cuerpo: tarea.nombre,
-    );
-    await _programar(
-      id: _idAviso(tarea.id, 1),
-      cuando: entrega.subtract(const Duration(hours: 1)),
-      titulo: '⏰ Te queda 1 hora para entregar',
-      cuerpo: tarea.nombre,
-    );
+    if (_unDia) {
+      await _programar(
+        id: _idAviso(tarea.id, 0),
+        cuando: entrega.subtract(const Duration(days: 1)),
+        titulo: '📚 Mañana se entrega una tarea',
+        cuerpo: tarea.nombre,
+      );
+    }
+    if (_unaHora) {
+      await _programar(
+        id: _idAviso(tarea.id, 1),
+        cuando: entrega.subtract(const Duration(hours: 1)),
+        titulo: '⏰ Te queda 1 hora para entregar',
+        cuerpo: tarea.nombre,
+      );
+    }
   }
 
   Future<void> cancelarTarea(String tareaId) async {

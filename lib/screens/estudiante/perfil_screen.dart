@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/tarea.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/logro_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../providers/vinculo_provider.dart';
+import '../../services/notificaciones_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/cerrar_sesion.dart';
 import '../../utils/mensajes.dart';
@@ -458,11 +460,117 @@ class _PerfilScreenState extends State<PerfilScreen> {
     ];
   }
 
+  /// Guarda el ajuste de recordatorios y reprograma los avisos de las tareas
+  /// pendientes según la nueva preferencia.
+  Future<void> _cambiarAvisos({
+    bool? activos,
+    bool? unDiaAntes,
+    bool? unaHoraAntes,
+  }) async {
+    final avisos = NotificacionesService.instancia;
+    final usuario = context.read<AuthProvider>().usuarioActual;
+    final tareas = context.read<TareaProvider>();
+    await avisos.cambiarAjustes(
+      activos: activos,
+      unDiaAntes: unDiaAntes,
+      unaHoraAntes: unaHoraAntes,
+    );
+    if (!mounted) return;
+    setState(() {});
+    if (activos == true) await avisos.pedirPermiso();
+    if (usuario != null) {
+      await avisos.sincronizar(
+        tareas.tareasDe(usuario.id, estado: Estado.pendiente),
+      );
+    }
+  }
+
+  Widget _chipAviso({
+    required String texto,
+    required bool seleccionado,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return FilterChip(
+      label: Text(texto),
+      selected: seleccionado,
+      onSelected: onChanged,
+      selectedColor: AppColors.verdeClaro,
+      checkmarkColor: AppColors.verde,
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        color: seleccionado ? AppColors.verde : AppColors.textoSuave,
+        fontWeight: seleccionado ? FontWeight.w700 : FontWeight.w500,
+      ),
+      side: BorderSide(color: seleccionado ? AppColors.verde : AppColors.borde),
+    );
+  }
+
   Widget _ajustes(bool sesionRecordada) {
+    final avisos = NotificacionesService.instancia;
     return Container(
       decoration: AppDecor.tarjeta(),
       child: Column(
         children: [
+          SwitchListTile(
+            value: avisos.activos,
+            onChanged: (valor) {
+              _cambiarAvisos(activos: valor);
+              mostrarMensaje(
+                context,
+                valor
+                    ? 'Recibirás recordatorios de tus entregas'
+                    : 'Ya no recibirás recordatorios',
+              );
+            },
+            secondary: const Icon(
+              Icons.notifications_active_outlined,
+              color: AppColors.verde,
+            ),
+            title: const Text(
+              'Recordatorios de entregas',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: const Text(
+              'Avisos en el teléfono antes de cada fecha de entrega.',
+              style: AppText.pequeno,
+            ),
+          ),
+          if (avisos.activos)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  const Text('Avisarme:', style: AppText.pequeno),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _chipAviso(
+                          texto: '1 día antes',
+                          seleccionado: avisos.unDiaAntes,
+                          onChanged: (v) {
+                            // Al menos uno debe quedar encendido.
+                            if (!v && !avisos.unaHoraAntes) return;
+                            _cambiarAvisos(unDiaAntes: v);
+                          },
+                        ),
+                        _chipAviso(
+                          texto: '1 hora antes',
+                          seleccionado: avisos.unaHoraAntes,
+                          onChanged: (v) {
+                            if (!v && !avisos.unDiaAntes) return;
+                            _cambiarAvisos(unaHoraAntes: v);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const Divider(height: 1, color: AppColors.borde),
           SwitchListTile(
             value: sesionRecordada,
             onChanged: (valor) {

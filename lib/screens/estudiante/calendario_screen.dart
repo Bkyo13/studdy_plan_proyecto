@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../models/tarea.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/feriado_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formato_fecha.dart';
+import '../../widgets/aviso_feriado.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_tarea.dart';
@@ -43,6 +45,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
 
   void _cambiarMes(int delta) {
     setState(() => _mes = DateTime(_mes.year, _mes.month + delta));
+    context.read<FeriadoProvider>().cargar(_mes.year);
   }
 
   void _irAHoy() {
@@ -57,6 +60,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
   Widget build(BuildContext context) {
     final usuario = context.watch<AuthProvider>().usuarioActual;
     final materias = context.watch<MateriaProvider>();
+    final feriados = context.watch<FeriadoProvider>();
     final tareas = usuario == null
         ? <Tarea>[]
         : context.watch<TareaProvider>().tareasDe(usuario.id);
@@ -113,6 +117,10 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
           const SizedBox(height: AppSpacing.entreSecciones),
           Text(formatoDiaLargo(_diaElegido), style: AppText.tituloSeccion),
           const SizedBox(height: 12),
+          if (feriados.feriadoEn(_diaElegido) case final nombre?) ...[
+            AvisoFeriado(nombreFeriado: nombre),
+            const SizedBox(height: 12),
+          ],
           if (delDia.isEmpty)
             const EstadoVacio(
               icono: Icons.event_available_outlined,
