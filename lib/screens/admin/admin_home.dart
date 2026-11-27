@@ -6,8 +6,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/logro_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../theme/app_theme.dart';
-import '../../utils/cerrar_sesion.dart';
 import '../../widgets/boton_circular.dart';
+import '../estudiante/perfil_screen.dart';
 import 'logros_admin_screen.dart';
 import 'materia_form_screen.dart';
 import 'materias_screen.dart';
@@ -46,9 +46,13 @@ class AdminHome extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
+                  // Mi perfil: editar datos, cambiar contraseña, cerrar
+                  // sesión y eliminar la cuenta.
                   BotonCircular(
-                    icono: Icons.logout,
-                    onPressed: () => confirmarCerrarSesion(context),
+                    icono: Icons.person_outline,
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const PerfilScreen()),
+                    ),
                   ),
                 ],
               ),

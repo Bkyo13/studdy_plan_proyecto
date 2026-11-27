@@ -136,9 +136,17 @@ class _PerfilScreenState extends State<PerfilScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Se borrarán tu cuenta, tus tareas y tus logros. '
-              'Esta acción no se puede deshacer.',
+            Text(
+              switch (usuario.rol) {
+                Rol.estudiante => 'Se borrarán tu cuenta, tus tareas y tus '
+                    'logros. Esta acción no se puede deshacer.',
+                Rol.tutor => 'Se borrarán tu cuenta y el vínculo con tu '
+                    'estudiante (sus tareas no se borran). Esta acción no se '
+                    'puede deshacer.',
+                Rol.administrador => 'Se borrará tu cuenta de administrador. '
+                    'Las materias y logros del catálogo se quedan. Esta acción '
+                    'no se puede deshacer.',
+              },
             ),
             if (usuario.accesoLocal) ...[
               const SizedBox(height: 16),
@@ -196,9 +204,16 @@ class _PerfilScreenState extends State<PerfilScreen> {
     // Primero sus datos (las reglas de Firestore exigen que siga con sesión)
     // y al final la cuenta.
     try {
-      await tareas.eliminarDeEstudiante(id);
-      await vinculos.eliminarDeEstudiante(id);
-      await logros.eliminarDeEstudiante(id);
+      switch (usuario.rol) {
+        case Rol.estudiante:
+          await tareas.eliminarDeEstudiante(id);
+          await vinculos.eliminarDeEstudiante(id);
+          await logros.eliminarDeEstudiante(id);
+        case Rol.tutor:
+          await vinculos.desvincular(id);
+        case Rol.administrador:
+          break; // El catálogo es de todos: no se borra.
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _guardando = false);
@@ -210,6 +225,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
       return;
     }
     tareas.detener();
+    vinculos.detener();
     final error = await auth.eliminarCuenta();
     if (!mounted) return;
     if (error != null) {
@@ -276,7 +292,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Estudiante · ${usuario.correo}',
+                      '${usuario.rol.etiqueta} · ${usuario.correo}',
                       textAlign: TextAlign.center,
                       style: AppText.pequeno,
                     ),
@@ -346,7 +362,10 @@ class _PerfilScreenState extends State<PerfilScreen> {
 
                     _titulo('AJUSTES'),
                     const SizedBox(height: 12),
-                    _ajustes(auth.sesionRecordada),
+                    _ajustes(
+                      auth.sesionRecordada,
+                      esEstudiante: usuario.rol == Rol.estudiante,
+                    ),
                     const SizedBox(height: AppSpacing.entreSecciones),
 
                     OutlinedButton.icon(
@@ -514,7 +533,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
     );
   }
 
-  Widget _ajustes(bool sesionRecordada) {
+  /// Los recordatorios solo aplican al estudiante (son de sus tareas).
+  Widget _ajustes(bool sesionRecordada, {required bool esEstudiante}) {
     final avisos = NotificacionesService.instancia;
     return Container(
       decoration: AppDecor.tarjeta(),
@@ -526,6 +546,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
         clipBehavior: Clip.antiAlias,
         child: Column(
         children: [
+          if (esEstudiante) ...[
           SwitchListTile(
             value: avisos.activos,
             onChanged: (valor) {
@@ -586,6 +607,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
               ),
             ),
           const Divider(height: 1, color: AppColors.borde),
+          ],
           SwitchListTile(
             value: sesionRecordada,
             onChanged: (valor) {
