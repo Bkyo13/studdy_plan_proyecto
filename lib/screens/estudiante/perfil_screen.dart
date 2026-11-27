@@ -360,6 +360,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     ),
                     const SizedBox(height: AppSpacing.entreSecciones),
 
+                    if (usuario.rol == Rol.estudiante) ...[
+                      _titulo('TUTOR'),
+                      const SizedBox(height: 12),
+                      _tutores(),
+                      const SizedBox(height: AppSpacing.entreSecciones),
+                    ],
+
                     _titulo('AJUSTES'),
                     const SizedBox(height: 12),
                     _ajustes(
@@ -394,6 +401,91 @@ class _PerfilScreenState extends State<PerfilScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  /// Tutores que el estudiante aceptó, con opción de quitarlos.
+  Widget _tutores() {
+    final auth = context.watch<AuthProvider>();
+    final aceptados = context.watch<VinculoProvider>().tutoresAceptados;
+    if (aceptados.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: AppDecor.tarjeta(),
+        child: const Text(
+          'Ningún tutor ve tu avance. Si un tutor te envía una solicitud, '
+          'te aparecerá en Inicio.',
+          style: AppText.pequeno,
+        ),
+      );
+    }
+    return Container(
+      decoration: AppDecor.tarjeta(),
+      child: Column(
+        children: [
+          for (final v in aceptados)
+            Material(
+              type: MaterialType.transparency,
+              child: ListTile(
+                leading: const Icon(
+                  Icons.supervisor_account_outlined,
+                  color: AppColors.verde,
+                ),
+                title: Text(auth.porId(v.tutorId)?.nombre ?? 'Tutor'),
+                subtitle: Text(
+                  auth.porId(v.tutorId)?.correo ?? 'Puede ver tus tareas y tu XP',
+                ),
+                trailing: TextButton(
+                  onPressed: () => _confirmarQuitarTutor(
+                    v.tutorId,
+                    auth.porId(v.tutorId)?.nombre ?? 'tu tutor',
+                  ),
+                  child: const Text(
+                    'Quitar',
+                    style: TextStyle(color: AppColors.peligro),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _confirmarQuitarTutor(String tutorId, String nombre) async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Quitar tutor'),
+        content: Text(
+          '$nombre dejará de ver tus tareas y tu avance. '
+          'Podrá enviarte otra solicitud más adelante.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Quitar',
+              style: TextStyle(
+                color: AppColors.peligro,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+    final ok = await context.read<VinculoProvider>().rechazar(tutorId);
+    if (!mounted) return;
+    mostrarMensaje(
+      context,
+      ok ? 'Tutor quitado' : 'No se pudo quitar. Revisa tu conexión.',
+      error: !ok,
     );
   }
 

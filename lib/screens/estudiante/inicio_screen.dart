@@ -6,6 +6,7 @@ import '../../models/tarea.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
+import '../../providers/vinculo_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/acciones_tarea.dart';
 import '../../utils/color_hex.dart';
@@ -14,6 +15,7 @@ import '../../widgets/estado_vacio.dart';
 import '../../widgets/insignia_xp.dart';
 import '../../widgets/tarjeta_deslizable.dart';
 import '../../widgets/tarjeta_esqueleto.dart';
+import '../../widgets/tarjeta_solicitud_tutor.dart';
 import 'detalle_tarea_screen.dart';
 import 'perfil_screen.dart';
 
@@ -48,6 +50,7 @@ class _InicioScreenState extends State<InicioScreen> {
         ? <Tarea>[]
         : tareas.tareasDe(usuario.id, estado: Estado.pendiente);
     final xp = usuario == null ? 0 : tareas.xpDe(usuario.id);
+    final solicitudes = context.watch<VinculoProvider>().solicitudesPendientes;
 
     final nombre = usuario?.nombre ?? '';
     final inicial = nombre.isNotEmpty ? nombre[0].toUpperCase() : '?';
@@ -122,6 +125,14 @@ class _InicioScreenState extends State<InicioScreen> {
             ],
           ),
           const SizedBox(height: AppSpacing.entreSecciones),
+          // Solicitudes de tutores que todavía no responde.
+          for (final solicitud in solicitudes) ...[
+            TarjetaSolicitudTutor(
+              key: ValueKey(solicitud.tutorId),
+              solicitud: solicitud,
+            ),
+            const SizedBox(height: AppSpacing.entreTarjetas),
+          ],
           if (pendientes.length >= 2) ...[
             _filtros(materiasConTareas),
             const SizedBox(height: AppSpacing.entreSecciones),

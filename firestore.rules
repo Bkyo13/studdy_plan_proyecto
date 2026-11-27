@@ -16,9 +16,13 @@ service cloud.firestore {
     }
 
     // ¿El usuario con sesión es el tutor vinculado a este estudiante?
+    // Solo cuenta si el estudiante ya aceptó la solicitud (los vínculos
+    // viejos, sin 'estado', se toman como aceptados).
     function esTutorDe(estudianteId) {
       let ruta = /databases/$(database)/documents/vinculos/$(request.auth.uid);
-      return exists(ruta) && get(ruta).data.estudianteId == estudianteId;
+      return exists(ruta)
+        && get(ruta).data.estudianteId == estudianteId
+        && get(ruta).data.get('estado', 'aceptado') == 'aceptado';
     }
 
     // ---------------- Perfiles: usuarios/{uid} ----------------
@@ -99,12 +103,24 @@ service cloud.firestore {
                   && (request.auth.uid == tutorId
                       || resource.data.estudianteId == request.auth.uid);
 
-      // Solo el tutor crea o cambia su propio vínculo.
+      // El tutor crea o cambia su propio vínculo, siempre como solicitud
+      // pendiente (no puede aceptarla él mismo).
       allow create, update: if logueado()
                             && request.auth.uid == tutorId
-                            && request.resource.data.tutorId == tutorId;
+                            && request.resource.data.tutorId == tutorId
+                            && request.resource.data.estado == 'pendiente';
 
-      // Lo puede quitar el tutor, o el estudiante (al eliminar su cuenta).
+      // El estudiante acepta una solicitud que le enviaron: solo puede
+      // cambiar 'estado' de pendiente a aceptado.
+      allow update: if logueado()
+                    && resource.data.estudianteId == request.auth.uid
+                    && resource.data.get('estado', 'aceptado') == 'pendiente'
+                    && request.resource.data.estado == 'aceptado'
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['estado']);
+
+      // Lo puede quitar el tutor, o el estudiante (al rechazar la solicitud,
+      // quitar al tutor o eliminar su cuenta).
       allow delete: if logueado()
                     && (request.auth.uid == tutorId
                         || resource.data.estudianteId == request.auth.uid);

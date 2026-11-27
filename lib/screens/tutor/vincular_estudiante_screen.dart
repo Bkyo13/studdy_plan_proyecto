@@ -8,7 +8,8 @@ import '../../utils/mensajes.dart';
 import '../../utils/validadores.dart';
 import '../../widgets/boton_circular.dart';
 
-/// Formulario del Tutor: vincula a un estudiante por su correo.
+/// Formulario del Tutor: envía una solicitud de vínculo a un estudiante por
+/// su correo. El estudiante la acepta o la rechaza desde su app.
 class VincularEstudianteScreen extends StatefulWidget {
   const VincularEstudianteScreen({super.key});
 
@@ -44,7 +45,10 @@ class _VincularEstudianteScreenState extends State<VincularEstudianteScreen> {
     }
 
     context.read<VinculoProvider>().vincular(tutor.id, estudiante.id);
-    mostrarMensaje(context, 'Estudiante vinculado: ${estudiante.nombre}');
+    mostrarMensaje(
+      context,
+      'Solicitud enviada a ${estudiante.nombre}. Verás su avance cuando la acepte.',
+    );
     Navigator.of(context).pop();
   }
 

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/tarea_provider.dart';
+import '../../providers/vinculo_provider.dart';
 import '../../services/notificaciones_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/animaciones.dart';
@@ -43,6 +44,8 @@ class _EstudianteHomeState extends State<EstudianteHome> {
     context
         .read<TareaProvider>()
         .escuchar(usuario.id, programarAvisos: true);
+    // Solicitudes de tutores (salen como aviso en Inicio) y tutores aceptados.
+    context.read<VinculoProvider>().escucharSolicitudes(usuario.id);
     await NotificacionesService.instancia.pedirPermiso();
   }
 

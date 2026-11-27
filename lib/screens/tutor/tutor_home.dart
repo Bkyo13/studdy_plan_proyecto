@@ -67,6 +67,8 @@ class TutorHome extends StatelessWidget {
     final vinculos = context.watch<VinculoProvider>();
     final estudianteId = tutor == null ? null : vinculos.estudianteIdDe(tutor.id);
     final estudiante = estudianteId == null ? null : auth.porId(estudianteId);
+    // Solicitud enviada que el estudiante todavía no acepta.
+    final pendienteId = tutor == null ? null : vinculos.pendienteDe(tutor.id);
     // Mientras llegan el vínculo o el perfil del estudiante desde Firestore.
     final cargando =
         vinculos.cargando || (estudianteId != null && estudiante == null);
@@ -121,12 +123,14 @@ class TutorHome extends StatelessWidget {
               const SizedBox(height: AppSpacing.entreSecciones),
               if (cargando)
                 const ListaEsqueleto(cantidad: 2, alto: 96)
+              else if (pendienteId != null)
+                ..._solicitudEnviada(context, auth.porId(pendienteId))
               else if (estudiante == null) ...[
                 const EstadoVacio(
                   icono: Icons.person_add_alt_1_outlined,
                   titulo: 'Aún no tienes un estudiante vinculado',
                   mensaje:
-                      'Vincula a un estudiante con su correo para ver sus tareas y su avance.',
+                      'Envía una solicitud con el correo de tu estudiante. Cuando la acepte, verás sus tareas y su avance.',
                 ),
                 const SizedBox(height: AppSpacing.entreSecciones),
                 ElevatedButton(
@@ -141,6 +145,33 @@ class TutorHome extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Mientras el estudiante no responde: aviso y opción de cancelar.
+  List<Widget> _solicitudEnviada(BuildContext context, Usuario? estudiante) {
+    final nombre = estudiante?.nombre ?? 'el estudiante';
+    return [
+      EstadoVacio(
+        icono: Icons.hourglass_top_outlined,
+        titulo: 'Solicitud enviada a $nombre',
+        mensaje:
+            'Cuando la acepte desde su app, aquí verás sus tareas y su avance.',
+      ),
+      const SizedBox(height: AppSpacing.entreSecciones),
+      OutlinedButton(
+        onPressed: () {
+          final tutor = context.read<AuthProvider>().usuarioActual;
+          if (tutor == null) return;
+          context.read<VinculoProvider>().desvincular(tutor.id);
+          mostrarMensaje(context, 'Solicitud cancelada');
+        },
+        style: AppDecor.botonSecundario(),
+        child: const Text(
+          'Cancelar solicitud',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      ),
+    ];
   }
 
   List<Widget> _resumen(BuildContext context, Usuario estudiante) {
