@@ -733,6 +733,26 @@ class _PerfilScreenState extends State<PerfilScreen> {
               applicationName: 'StudyPlan',
               applicationVersion: '1.0.0',
               applicationLegalese: 'Proyecto escolar · UTNG',
+              children: const [
+                SizedBox(height: 16),
+                Text(
+                  'Tus tareas, tu XP y tus logros se guardan en Firebase y solo '
+                  'tú (y el tutor que aceptes) pueden verlos. No vendemos ni '
+                  'compartimos tus datos y no hay anuncios. Lo que escribes al '
+                  'asistente se envía a Gemini para responderte y no se guarda.',
+                  style: AppText.pequeno,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Política de privacidad completa:',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                ),
+                SizedBox(height: 4),
+                SelectableText(
+                  'github.com/Bkyo13/studdy_plan_proyecto/blob/main/docs/PRIVACIDAD.md',
+                  style: TextStyle(fontSize: 13, color: AppColors.verde),
+                ),
+              ],
             ),
           ),
         ],

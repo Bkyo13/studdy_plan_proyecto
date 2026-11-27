@@ -85,12 +85,18 @@ class AsistenteProvider extends ChangeNotifier {
       ));
     } catch (e) {
       _log('[Asistente] Error al consultar la IA: $e');
-      // App Check rechazó la petición: esta copia de la app no está
-      // certificada (por ejemplo, un APK compartido fuera de Google Play).
-      final porAppCheck = e.toString().toLowerCase().contains('app check');
+      // App Check rechazó la petición. Hoy no debería pasar (la app ya no
+      // usa App Check), pero sí cuando Google lo exija (ver main.dart). El
+      // error puede decir "App Check", "firebase_app_check" o
+      // "App attestation failed".
+      final error = e.toString().toLowerCase();
+      final porAppCheck = error.contains('app check') ||
+          error.contains('app_check') ||
+          error.contains('appcheck') ||
+          error.contains('attestation');
       _mensajes.add(MensajeChat(
         texto: porAppCheck
-            ? 'El asistente no está disponible en esta versión de la app. '
+            ? 'El asistente no está disponible por ahora. '
                 'Todo lo demás funciona normal; mientras, puedes organizar '
                 'tus tareas desde Inicio y el Calendario.'
             : 'No pude responder en este momento. Revisa tu conexión a '

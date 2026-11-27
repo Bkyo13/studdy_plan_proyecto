@@ -1,6 +1,4 @@
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -24,24 +22,12 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  // App Check: comprueba que las peticiones a la IA vienen de esta app.
-  // - Al desarrollar (flutter run): proveedor de depuración. Su token se
-  //   registra en la consola de Firebase (App Check -> Administrar tokens).
-  // - En la versión release: Play Integrity / App Attest. Solo funcionan si
-  //   la app está en Google Play / App Store; con el APK compartido directo
-  //   el asistente deja de responder cuando Firebase exija App Check.
-  try {
-    await FirebaseAppCheck.instance.activate(
-      providerAndroid: kDebugMode
-          ? AndroidDebugProvider()
-          : AndroidPlayIntegrityProvider(),
-      providerApple: kDebugMode
-          ? AppleDebugProvider()
-          : AppleAppAttestWithDeviceCheckFallbackProvider(),
-    );
-  } catch (e) {
-    if (kDebugMode) debugPrint('[AppCheck] No se pudo activar: $e');
-  }
+  // Sin App Check: StudyPlan se comparte como APK (sin Google Play) y en
+  // iPhone se instala desde Xcode, así que Play Integrity / App Attest no
+  // pueden certificarla. Para que el asistente funcione en cualquier
+  // teléfono, la IA se usa sin App Check (en la consola está "No aplicado").
+  // OJO: cuando Google exija App Check para Firebase AI Logic (21-ene-2027)
+  // hay que volver a agregarlo (ver el historial de git de este archivo).
   await NotificacionesService.instancia.inicializar();
   runApp(const StudyPlanApp());
 }

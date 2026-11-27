@@ -1,119 +1,153 @@
-# studdy_plan_proyecto
+# StudyPlan 📚
 
-# StudyPlan
+App móvil para que los estudiantes organicen sus tareas escolares, reciban recordatorios antes de cada entrega y vean su avance con puntos de experiencia (XP), niveles y logros. Un tutor (por ejemplo, un papá o un asesor) puede dar seguimiento al avance de un estudiante, y un administrador mantiene el catálogo de materias y logros.
 
-**Equipo:** Diego Hernández Bautista y Kinberly Daniela Jaimes
-**Carrera:** TSU en Desarrollo de Software Multiplataforma · Grupo GTID-243
-**Asignatura:** Desarrollo de Aplicaciones Móviles · Universidad Tecnológica del Norte de Guanajuato (UTNG)
+Proyecto de TSU · Universidad Tecnológica del Norte de Guanajuato (UTNG).
 
-## 1. Descripción breve
+**Equipo:** Diego Hernández · Kinberly
 
-StudyPlan es una app móvil hecha con Flutter para que los estudiantes del norte de Guanajuato organicen sus tareas, proyectos y fechas de entrega en un solo lugar. La verdad es que el problema que atiende es bien común: las actividades se quedan regadas entre la libreta, las notas del celular, el calendario y los grupos de WhatsApp, y por lo mismo de que no hay un sitio único donde ver qué falta, se olvidan entregas o se acumulan pendientes.
+---
 
-Cada tarea lleva materia, descripción, fecha de entrega, prioridad (alta, media o baja) y estado (pendiente o completada). Al marcar una tarea como completada el estudiante suma XP, y la app muestra su historial de logros escolares. Aparte de eso, la app tiene un rol de administrador (que gestiona las materias) y uno de tutor (un familiar que consulta el avance del estudiante en solo lectura), para un total de 3 tipos de usuario.
+## Capturas
 
-## 2. Los 3 tipos de usuario y sus dashboards
+| Inicio | Detalle con pasos | Calendario | Logros |
+|---|---|---|---|
+| ![Inicio](docs/capturas/inicio.png) | ![Detalle](docs/capturas/detalle.png) | ![Calendario](docs/capturas/calendario.png) | ![Logros](docs/capturas/logros.png) |
 
-La app abre con un splashscreen y de ahi pasa al login, donde el usuario puede iniciar sesión o crear una cuenta nueva eligiendo su rol. Tanto el login como el registro validan los campos (el correo tiene que tener un formato válido, la contraseña mínimo 6 caracteres y, en el registro, hay que confirmar la contraseña y escribir el nombre). Una vez que la sesión está abierta, un enrutador por rol (`AuthGate`) manda al usuario a su dashboard, de modo que cada tipo de usuario ve solo lo que le corresponde.
+| Asistente IA | Panel del tutor | Admin: materias | Login |
+|---|---|---|---|
+| ![Asistente](docs/capturas/asistente.png) | ![Tutor](docs/capturas/tutor.png) | ![Admin](docs/capturas/admin.png) | ![Login](docs/capturas/login.png) |
 
-**Estudiante.** Es el usuario principal de StudyPlan y el que organiza sus propias tareas. Su dashboard es la pantalla de Inicio, que muestra un saludo con su nombre, la lista de tareas pendientes ordenadas por fecha de entrega (cada tarjeta lleva la materia, el nombre de la tarea, su prioridad y la fecha) y un botón "+" para agregar una nueva. Con la barra inferior puede pasar a la pestaña de Completadas, donde ve su historial de tareas terminadas y el XP que ha acumulado. Su formulario es "Nueva tarea" (nombre, materia, descripción, fecha de entrega y prioridad), y al tocar cualquier tarea abre su detalle, desde donde la puede marcar como completada o eliminar. Las listas de pendientes y de completadas tienen su estado vacío para cuando todavía no hay nada que mostrar.
+---
 
-**Administrador.** Se encarga de mantener el catálogo de materias que después usan los estudiantes al crear sus tareas. Su dashboard es un panel de administración con el total de usuarios registrados (desglosado por tipo) y el total de materias, además de accesos directos a la lista de materias y al formulario para agregar una nueva. La lista de materias muestra cada una con su color y tiene estado vacío, y su formulario es "Nueva materia" (nombre y color), que no permite guardar nombres vacíos ni repetidos.
+## Funciones
 
-**Tutor.** Es un familiar que da seguimiento al avance de un estudiante, y por lo mismo de que solo consulta, no puede crear, completar ni borrar tareas (todo es de solo lectura). Su dashboard es un resumen del estudiante que tiene vinculado, con su nombre, cuántas tareas tiene pendientes y cuántas completadas, y su XP, y desde ahí puede entrar a la lista de tareas del estudiante y filtrarla entre pendientes y completadas. Si todavía no tiene a nadie vinculado, el dashboard muestra un estado vacío con el botón "Vincular estudiante", que abre su formulario: ahí escribe el correo del estudiante, y si no existe una cuenta de estudiante con ese correo la app lo avisa con un mensaje de error, no?
+### Estudiante
+- **Tareas** con materia, prioridad (alta, media, baja), fecha y hora de entrega.
+  - Se completan deslizando la tarjeta a la derecha y se eliminan deslizando a la izquierda, con botón **Deshacer**.
+  - Las vencidas salen en su propia sección.
+- **Pasos (subtareas):** cada tarea puede dividirse en un checklist con barra de avance.
+- **Búsqueda y filtros** por prioridad y materia. La búsqueda ignora acentos y mayúsculas y también revisa los pasos.
+- **Calendario** del mes con puntitos por día. Se puede crear una tarea con el día ya puesto, y se avisa si el día es feriado.
+- **Recordatorios locales:** 1 día antes y 1 hora antes de cada entrega, configurables desde el perfil.
+- **XP:**
 
-## 3. Manejo de estado elegido (y por qué)
+  | Concepto | Puntos |
+  |---|---|
+  | Prioridad alta | 15 |
+  | Prioridad media | 10 |
+  | Prioridad baja | 5 |
+  | Entrega a tiempo | +5 |
+  | Entrega tarde | la mitad de los puntos |
+  | Completada en menos de 1 hora después de crearla (anti-trampa) | 0 |
 
-Elegimos **Provider** con `ChangeNotifier`. La verdad es que lo escogimos por tres razones: es sencillo de entender para un proyecto de este tamaño, aparte de que no obliga a escribir mucho código extra (nomas se crea el provider, se registra en `MultiProvider` y las pantallas lo escuchan con `context.watch` o lo usan con `context.read`), y además nos permitió repartirnos el trabajo, ya que cada quien se encargó de sus propios providers sin pisarse con el otro.
+- **Niveles:** de Novato a Maestro, con barra hacia el siguiente nivel.
+- **Logros:** se desbloquean con el XP y salen con un aviso.
+- **Mi progreso:** XP por semana, entregas a tiempo y tareas por materia.
+- **Asistente con IA** (Gemini): ayuda a dividir una tarea en pasos y a resolver dudas.
+- **Solicitudes de tutor:** el estudiante decide si acepta o rechaza a quien quiere ver su avance, y lo puede quitar después.
 
-Los providers de la app son:
+### Tutor
+- Envía una **solicitud** al correo del estudiante y solo ve sus datos cuando la acepta.
+- Ve el resumen del estudiante (pendientes, atrasadas, completadas y XP) y sus tareas, en **solo lectura**.
 
-| Provider          | Qué guarda 
-| `AuthProvider` | Usuarios, sesión actual y rol (inicio de sesión, registro y cierre de sesión) |
-| `MateriaProvider` | Catálogo de materias |
-| `TareaProvider` | Tareas de los estudiantes (agregar, completar, eliminar y filtrar) |
-| `VinculoProvider` | Relación entre cada tutor y su estudiante vinculado |
+### Administrador
+- Administra el **catálogo de materias** (nombre y color) y el **catálogo de logros** (nombre, descripción y XP requerido).
 
-Así se cumple que el estado persista al navegar: el rol, las tareas y las listas se mantienen al cambiar de pantalla porque viven en los providers, no en cada pantalla.
+### Cuenta
+- Registro e inicio de sesión con **correo y contraseña** o con **Google**.
+- Recuperación de contraseña por correo.
+- Edición de perfil y eliminación de la cuenta con todos sus datos.
 
-**Limitación:** los datos se guardan en memoria, no en una base de datos. Mientras la app está abierta se conservan, pero al cerrarla se reinician a los datos de ejemplo. Para una versión futura se podría agregar almacenamiento local o un servidor, no?
+---
 
-## 4. Cómo ejecutar la app
+## Tecnologías
 
-**Requisitos**
+| Parte | Herramienta |
+|---|---|
+| App | Flutter 3.x · Dart 3.7+ |
+| Estado | Provider (`ChangeNotifier`) |
+| Base de datos | Cloud Firestore (región `northamerica-south1`) |
+| Inicio de sesión | Firebase Authentication (correo y Google) |
+| IA | Firebase AI Logic · Gemini |
+| Seguridad de la API | Firebase App Check |
+| Recordatorios | `flutter_local_notifications` + `timezone` |
+| Feriados | API pública [Nager.Date](https://date.nager.at) (con caché en `shared_preferences`) |
 
-- Flutter con Dart 3.7 o superior.
-- Un emulador de Android o iOS, o un dispositivo físico (también corre en Chrome).
+---
 
-**Pasos**
+## Estructura del proyecto
+
+```
+lib/
+├── main.dart              # Firebase, App Check, providers y tema
+├── models/                # Usuario, Tarea, Subtarea, Materia, Logro, RegistroXP, Vinculo, Nivel...
+├── providers/             # Lógica y conexión con Firestore (auth, tareas, vínculos, logros...)
+├── services/              # Notificaciones locales
+├── screens/
+│   ├── estudiante/        # Inicio, Calendario, Hechas, Logros, Asistente, Detalle, Perfil...
+│   ├── tutor/             # Panel del tutor y vincular estudiante
+│   └── admin/             # Catálogos de materias y logros
+├── theme/                 # Colores, espacios y estilos
+├── utils/                 # Animaciones, fechas, validadores, búsqueda...
+└── widgets/               # Tarjetas y componentes reutilizables
+firestore.rules            # Reglas de seguridad de Firestore
+docs/                      # UML, política de privacidad y capturas
+```
+
+El diagrama de clases y el modelo de datos están en [docs/UML.md](docs/UML.md).
+
+---
+
+## Datos en Firestore
+
+| Colección | Qué guarda | Quién la modifica |
+|---|---|---|
+| `usuarios/{uid}` | Nombre, correo, rol y proveedor | El propio usuario |
+| `usuarios/{uid}/xp/{tareaId}` | Historial de XP (un registro por tarea) | El estudiante |
+| `usuarios/{uid}/logros/{logroId}` | Logros obtenidos | El estudiante |
+| `tareas/{id}` | Tareas con sus pasos | Solo su dueño (el tutor vinculado solo las lee) |
+| `vinculos/{tutorId}` | Solicitud tutor → estudiante (`pendiente` / `aceptado`) | El tutor la crea; el estudiante la acepta o la borra |
+| `materias/{id}` | Catálogo de materias | Administrador |
+| `logros/{id}` | Catálogo de logros | Administrador |
+
+Las reglas de [`firestore.rules`](firestore.rules) cumplen esto aunque alguien intente saltarse la app.
+
+---
+
+## Cómo correrlo
+
+Requisitos: Flutter 3.x, Android Studio (SDK de Android) y, para iOS, Xcode.
 
 ```bash
-# 1. Clonar el repositorio
-git clone 
-cd 
-
-# 2. Instalar las dependencias
+git clone https://github.com/Bkyo13/studdy_plan_proyecto.git
+cd studdy_plan_proyecto
 flutter pub get
-
-# 3. Ejecutar la app
 flutter run
 ```
 
-La única dependencia externa es [`provider`](https://pub.dev/packages/provider).
+### Generar el APK
 
-**Cuentas de ejemplo para probar los 3 roles** (contraseña de todas: `123456`)
+```bash
+flutter build apk --release
+```
 
-| Correo | Rol |
-|--------|-----|
-| `sofia@demo.com` | Estudiante |
-| `tutor@demo.com` | Tutor |
-| `admin.studyplan@gmail.com` | Administrador |
+El APK queda en `build/app/outputs/flutter-apk/app-release.apk`.
 
-También se puede crear una cuenta nueva desde la pantalla de registro. El tutor empieza sin estudiante vinculado, para poder probar el formulario de vinculación con el correo `sofia@demo.com`.
+> 🔒 La llave de firma (`*.jks`) y `android/key.properties` **no se suben al repositorio**. Sin ellos, el APK sale firmado con la llave de depuración, que sirve para probarlo pero no para distribuirlo.
 
-**Estructura de lib/**
+### Publicar las reglas
 
-lib/
-├── main.dart
-├── theme/          colores, tipografía y estilos compartidos
-├── models/         Usuario, Materia, Tarea y Vinculo (más los enums de rol, prioridad y estado)
-├── providers/      AuthProvider, MateriaProvider, TareaProvider, VinculoProvider
-├── screens/        splash, login, registro, enrutador por rol
-│   ├── admin/      dashboard, lista y formulario de materias
-│   ├── estudiante/ inicio, nueva tarea, detalle y completadas
-│   └── tutor/      resumen, lista de tareas y vinculación
-├── utils/          validadores, mensajes y formato de fechas
-└── widgets/        componentes reutilizables
+Copia el contenido de `firestore.rules` y pégalo en la consola de Firebase, en **Firestore Database → Reglas → Publicar**.
 
+---
 
-## 5. Screenshots
-### Splashscreen
-![Splash](screenshots/01-splash.png)
+## Distribución
 
-### Autenticación
-![Login con validación](screenshots/02-login.png)
-![Registro con selección de rol](screenshots/03-registro.png)
+Por ahora la app se comparte como **APK** (Android), sin pasar por Google Play ni App Store. Para instalarla hay que permitir "Instalar apps desconocidas" en el teléfono.
 
-### Dashboards
-![Dashboard Administrador](screenshots/04-dashboard-admin.png)
-![Dashboard Estudiante](screenshots/06-dashboard-alum.png)
-![Dashboard Tutor](screenshots/05-dashboard-tutor.png)
+---
 
-### Listas
-![Lista principal: tareas](screenshots/07-lista-principal.png)
-![Lista secundaria: materias](screenshots/08-lista-detalle.png)
-![Estado vacío](screenshots/09-lista-vacia.png)
+## Privacidad
 
-### Formularios
-![Formulario del Administrador: nueva materia](screenshots/10-formulario.png)
-
-![Formulario del Administrador: materia agregada](screenshots/11-formulario.png)
-
-### Evidencia funcional
-![Foto del equipo con la app corriendo](screenshots/011_foto_equipo.JPG)
-![Flujo de navegación](screenshots/012_flujo.JPG) 
-![Flujo de navegación](screenshots/013_flujo.JPG) 
-![Flujo de navegación](screenshots/014_flujo.JPG)
-![Flujo de navegación](screenshots/015_flujo.JPG)
-![Flujo de navegación](screenshots/016_flujo.JPG)
-![Flujo de navegación](screenshots/017_flujo.JPG)
+Qué datos se guardan y para qué: [docs/PRIVACIDAD.md](docs/PRIVACIDAD.md).
