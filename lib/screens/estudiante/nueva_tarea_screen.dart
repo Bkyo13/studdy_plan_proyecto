@@ -20,7 +20,11 @@ class NuevaTareaScreen extends StatefulWidget {
   /// Si se pasa una tarea, la pantalla funciona como "Editar tarea".
   final Tarea? tarea;
 
-  const NuevaTareaScreen({super.key, this.tarea});
+  /// Día que llega ya puesto (al crear desde el Calendario). Se usa a las
+  /// 23:59 de ese día; si el día ya pasó, se ignora.
+  final DateTime? fechaInicial;
+
+  const NuevaTareaScreen({super.key, this.tarea, this.fechaInicial});
 
   @override
   State<NuevaTareaScreen> createState() => _NuevaTareaScreenState();
@@ -51,6 +55,16 @@ class _NuevaTareaScreenState extends State<NuevaTareaScreen> {
       _materiaId = t.materiaId;
       _fecha = t.fechaEntrega;
       _prioridad = t.prioridad;
+    } else if (widget.fechaInicial case final dia?) {
+      final propuesta = DateTime(dia.year, dia.month, dia.day, 23, 59);
+      if (propuesta.isAfter(DateTime.now())) {
+        _fecha = propuesta;
+        _fechaCtrl.text = formatoEntrega(propuesta);
+        // Feriados de ese año, por si es de otro año.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) context.read<FeriadoProvider>().cargar(propuesta.year);
+        });
+      }
     }
   }
 

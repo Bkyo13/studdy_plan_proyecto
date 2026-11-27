@@ -14,6 +14,7 @@ import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_tarea.dart';
 import '../../widgets/tarjeta_esqueleto.dart';
 import 'detalle_tarea_screen.dart';
+import 'nueva_tarea_screen.dart';
 
 /// Pestaña Calendario: vista del mes con puntitos en los días que tienen
 /// entregas, y abajo la lista de tareas del día elegido. Hecho con widgets
@@ -55,6 +56,15 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
       _mes = DateTime(hoy.year, hoy.month);
       _diaElegido = hoy;
     });
+  }
+
+  /// Abre Nueva tarea con el día elegido ya puesto como fecha de entrega.
+  void _agregarEnDia() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => NuevaTareaScreen(fechaInicial: _diaElegido),
+      ),
+    );
   }
 
   @override
@@ -116,7 +126,29 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.entreSecciones),
-          Text(formatoDiaLargo(_diaElegido), style: AppText.tituloSeccion),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  formatoDiaLargo(_diaElegido),
+                  style: AppText.tituloSeccion,
+                ),
+              ),
+              // A días que ya pasaron no se les pueden poner entregas.
+              if (!_diaElegido.isBefore(_soloDia(DateTime.now())))
+                TextButton.icon(
+                  onPressed: _agregarEnDia,
+                  icon: const Icon(Icons.add, size: 20, color: AppColors.verde),
+                  label: const Text(
+                    'Agregar',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.verde,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           const SizedBox(height: 12),
           if (feriados.feriadoEn(_diaElegido) case final nombre?) ...[
             AvisoFeriado(nombreFeriado: nombre),
@@ -125,10 +157,12 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
           if (context.read<TareaProvider>().cargando)
             const ListaEsqueleto(cantidad: 2)
           else if (delDia.isEmpty)
-            const EstadoVacio(
+            EstadoVacio(
               icono: Icons.event_available_outlined,
               titulo: 'Sin entregas este día',
-              mensaje: 'Elige otro día o agrega una tarea desde Inicio.',
+              mensaje: _diaElegido.isBefore(_soloDia(DateTime.now()))
+                  ? 'Elige otro día para ver sus entregas.'
+                  : 'Toca "Agregar" para crear una tarea con este día ya puesto.',
             )
           else
             for (final tarea in delDia) ...[
