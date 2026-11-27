@@ -6,6 +6,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/busqueda.dart';
+import '../../widgets/campo_busqueda.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/insignia_xp.dart';
 import '../../widgets/tarjeta_tarea.dart';
@@ -13,8 +15,15 @@ import '../../widgets/tarjeta_esqueleto.dart';
 import 'detalle_tarea_screen.dart';
 
 /// Pestaña Completadas: historial, XP y banner de progreso (lista secundaria).
-class CompletadasScreen extends StatelessWidget {
+class CompletadasScreen extends StatefulWidget {
   const CompletadasScreen({super.key});
+
+  @override
+  State<CompletadasScreen> createState() => _CompletadasScreenState();
+}
+
+class _CompletadasScreenState extends State<CompletadasScreen> {
+  String _busqueda = '';
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +34,16 @@ class CompletadasScreen extends StatelessWidget {
     final completadas = usuario == null
         ? <Tarea>[]
         : tareasProvider.tareasDe(usuario.id, estado: Estado.completada);
+    // Si el buscador ya no se muestra, lo escrito no filtra.
+    final busqueda = completadas.length >= 3 ? _busqueda : '';
+    final buscando = busqueda.trim().isNotEmpty;
+    final encontradas = completadas
+        .where((t) => coincideBusqueda(
+              t,
+              busqueda,
+              materia: materias.porId(t.materiaId)?.nombre,
+            ))
+        .toList();
     final xp = usuario == null ? 0 : tareasProvider.xpDe(usuario.id);
     final enLaSemana =
         usuario == null ? 0 : tareasProvider.completadasEnLaSemana(usuario.id);
@@ -54,8 +73,16 @@ class CompletadasScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.entreSecciones),
-          if (enLaSemana > 0) ...[
+          if (enLaSemana > 0 && !buscando) ...[
             _bannerProgreso(enLaSemana),
+            const SizedBox(height: AppSpacing.entreSecciones),
+          ],
+          // El buscador sale cuando ya hay varias en el historial.
+          if (completadas.length >= 3) ...[
+            CampoBusqueda(
+              hint: 'Buscar en tu historial',
+              onChanged: (texto) => setState(() => _busqueda = texto),
+            ),
             const SizedBox(height: AppSpacing.entreSecciones),
           ],
           if (tareasProvider.cargando)
@@ -66,8 +93,14 @@ class CompletadasScreen extends StatelessWidget {
               titulo: 'Aún no has completado tareas',
               mensaje: 'Cuando termines una, aparecerá aquí.',
             )
+          else if (encontradas.isEmpty)
+            EstadoVacio(
+              icono: Icons.search_off_outlined,
+              titulo: 'Sin resultados',
+              mensaje: 'No encontramos "${_busqueda.trim()}" en tu historial.',
+            )
           else
-            for (final tarea in completadas) ...[
+            for (final tarea in encontradas) ...[
               TarjetaTarea(
                 tarea: tarea,
                 materia: materias.porId(tarea.materiaId),

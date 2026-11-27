@@ -9,8 +9,10 @@ import '../../providers/tarea_provider.dart';
 import '../../providers/vinculo_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/acciones_tarea.dart';
+import '../../utils/busqueda.dart';
 import '../../utils/color_hex.dart';
 import '../../utils/mensajes.dart';
+import '../../widgets/campo_busqueda.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/insignia_xp.dart';
 import '../../widgets/tarjeta_deslizable.dart';
@@ -34,6 +36,7 @@ class _InicioScreenState extends State<InicioScreen> {
   // Filtros (null = sin filtro). Se pueden combinar materia y prioridad.
   String? _filtroMateria;
   Prioridad? _filtroPrioridad;
+  String _busqueda = '';
 
   bool get _hayFiltros => _filtroMateria != null || _filtroPrioridad != null;
 
@@ -66,12 +69,23 @@ class _InicioScreenState extends State<InicioScreen> {
       _filtroMateria = null;
     }
 
-    final filtradas = pendientes.where(_pasaFiltros).toList();
+    // Si el buscador ya no se muestra, lo escrito no filtra.
+    final busqueda = pendientes.length >= 2 ? _busqueda : '';
+    final filtradas = pendientes
+        .where(_pasaFiltros)
+        .where((t) => coincideBusqueda(
+              t,
+              busqueda,
+              materia: materias.porId(t.materiaId)?.nombre,
+            ))
+        .toList();
+    final buscando = busqueda.trim().isNotEmpty;
     // Las vencidas van en su propia sección, arriba y siempre completas.
     final atrasadas = filtradas.where((t) => t.vencida).toList();
     final aTiempo = filtradas.where((t) => !t.vencida).toList();
     final hayMas = aTiempo.length > _limiteInicial;
-    final visibles = (_verTodas || !hayMas)
+    // Al buscar se muestran todos los resultados.
+    final visibles = (_verTodas || !hayMas || buscando)
         ? aTiempo
         : aTiempo.take(_limiteInicial).toList();
 
@@ -134,6 +148,11 @@ class _InicioScreenState extends State<InicioScreen> {
             const SizedBox(height: AppSpacing.entreTarjetas),
           ],
           if (pendientes.length >= 2) ...[
+            CampoBusqueda(
+              hint: 'Buscar en tus pendientes',
+              onChanged: (texto) => setState(() => _busqueda = texto),
+            ),
+            const SizedBox(height: 12),
             _filtros(materiasConTareas),
             const SizedBox(height: AppSpacing.entreSecciones),
           ],
@@ -163,7 +182,7 @@ class _InicioScreenState extends State<InicioScreen> {
                   style: AppText.tituloSeccion,
                 ),
               ),
-              if (hayMas)
+              if (hayMas && !buscando)
                 TextButton(
                   onPressed: () => setState(() => _verTodas = !_verTodas),
                   child: Text(
@@ -185,10 +204,14 @@ class _InicioScreenState extends State<InicioScreen> {
               mensaje: 'Toca el botón + para agregar tu primera tarea.',
             )
           else if (filtradas.isEmpty)
-            const EstadoVacio(
-              icono: Icons.filter_alt_off_outlined,
+            EstadoVacio(
+              icono: buscando
+                  ? Icons.search_off_outlined
+                  : Icons.filter_alt_off_outlined,
               titulo: 'Ninguna tarea coincide',
-              mensaje: 'Prueba con otros filtros o quítalos.',
+              mensaje: buscando
+                  ? 'No encontramos "${_busqueda.trim()}" en tus pendientes.'
+                  : 'Prueba con otros filtros o quítalos.',
             )
           else if (aTiempo.isEmpty)
             const EstadoVacio(
