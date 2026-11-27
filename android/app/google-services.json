@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "754287645731-dn95osv91hm3pcfq0c4e9s8qekafimv4.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.diegohernandez.studyplan",
+            "certificate_hash": "c43ed474a19262c3e74929d93286469a6b44daef"
+          }
+        },
+        {
           "client_id": "754287645731-2gr3safs125knda3llbvecpmirgu9h9p.apps.googleusercontent.com",
           "client_type": 3
         }

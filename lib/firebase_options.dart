@@ -68,6 +68,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '754287645731',
     projectId: 'studyplan-d50e0',
     storageBucket: 'studyplan-d50e0.firebasestorage.app',
+    androidClientId: '754287645731-dn95osv91hm3pcfq0c4e9s8qekafimv4.apps.googleusercontent.com',
     iosClientId: '754287645731-dm4ao5q3u7qqsmkqntil1hs92gjeq8u8.apps.googleusercontent.com',
     iosBundleId: 'com.diegohernandez.studyplan',
   );
