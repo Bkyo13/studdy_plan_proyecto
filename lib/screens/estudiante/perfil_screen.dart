@@ -189,6 +189,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
     try {
       await tareas.eliminarDeEstudiante(id);
       await vinculos.eliminarDeEstudiante(id);
+      await logros.eliminarDeEstudiante(id);
     } catch (_) {
       if (!mounted) return;
       setState(() => _guardando = false);
@@ -199,7 +200,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
       );
       return;
     }
-    logros.eliminarDeEstudiante(id);
     tareas.detener();
     final error = await auth.eliminarCuenta();
     if (!mounted) return;

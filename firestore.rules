@@ -9,6 +9,12 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // ¿El usuario con sesión es administrador? (su rol se lee de su perfil)
+    function esAdmin() {
+      return logueado()
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'administrador';
+    }
+
     // ¿El usuario con sesión es el tutor vinculado a este estudiante?
     function esTutorDe(estudianteId) {
       let ruta = /databases/$(database)/documents/vinculos/$(request.auth.uid);
@@ -34,6 +40,24 @@ service cloud.firestore {
 
       // Cada quien puede borrar solo su perfil (al eliminar su cuenta).
       allow delete: if logueado() && request.auth.uid == uid;
+
+      // Logros obtenidos: usuarios/{uid}/logros/{logroId}
+      // Solo el propio estudiante los ve, los gana y los borra (al eliminar
+      // su cuenta). No se pueden modificar (ni cambiar la fecha).
+      match /logros/{logroId} {
+        allow read, create, delete: if logueado() && request.auth.uid == uid;
+      }
+    }
+
+    // ---------------- Catálogos: materias y logros ----------------
+    // Todos los usuarios con sesión los leen; solo el admin los modifica.
+    match /materias/{materiaId} {
+      allow read: if logueado();
+      allow write: if esAdmin();
+    }
+    match /logros/{logroId} {
+      allow read: if logueado();
+      allow write: if esAdmin();
     }
 
     // ---------------- Tareas: tareas/{tareaId} ----------------

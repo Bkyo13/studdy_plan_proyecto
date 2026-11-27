@@ -1,74 +1,106 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/logro.dart';
 
-/// Catálogo de logros (lo administra el Administrador) y los logros que ha
-/// obtenido cada estudiante. En memoria, con datos de ejemplo.
+/// Catálogo de logros (lo administra el Administrador, en `logros/{id}`) y
+/// los logros que obtuvo el estudiante con sesión
+/// (`usuarios/{uid}/logros/{logroId}`), guardados en Firestore.
+///
+/// Empieza a escuchar solo cuando hay una sesión y se detiene al cerrarla.
 class LogroProvider extends ChangeNotifier {
-  final List<Logro> _logros = [
-    const Logro(
-      id: '1',
+  static void _log(String mensaje) {
+    if (kDebugMode) debugPrint(mensaje);
+  }
+
+  /// Catálogo inicial que el admin puede cargar con un botón.
+  static const catalogoInicial = [
+    Logro(
+      id: 'primer_paso',
       nombre: 'Primer paso',
       descripcion: 'Completa tu primera tarea.',
       xpRequerido: 10,
     ),
-    const Logro(
-      id: '2',
+    Logro(
+      id: 'en_marcha',
       nombre: 'En marcha',
       descripcion: 'Acumula 30 XP completando tareas.',
       xpRequerido: 30,
     ),
-    const Logro(
-      id: '3',
+    Logro(
+      id: 'constante',
       nombre: 'Constante',
       descripcion: 'Acumula 50 XP completando tareas.',
       xpRequerido: 50,
     ),
-    const Logro(
-      id: '4',
+    Logro(
+      id: 'organizado',
       nombre: 'Organizado',
       descripcion: 'Acumula 100 XP completando tareas.',
       xpRequerido: 100,
     ),
-    const Logro(
-      id: '5',
+    Logro(
+      id: 'maestro_del_tiempo',
       nombre: 'Maestro del tiempo',
       descripcion: 'Acumula 200 XP completando tareas.',
       xpRequerido: 200,
     ),
   ];
 
-  final List<EstudianteLogro> _obtenidos = [];
-  int _siguienteLogroId = 6;
-  int _siguienteObtenidoId = 1;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  CollectionReference<Map<String, dynamic>> get _catalogo =>
+      _db.collection('logros');
+  CollectionReference<Map<String, dynamic>> _obtenidosDe(String uid) =>
+      _db.collection('usuarios').doc(uid).collection('logros');
+
+  List<Logro> _logros = [];
+  List<EstudianteLogro> _obtenidos = [];
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subCatalogo;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subObtenidos;
+  StreamSubscription<User?>? _subSesion;
 
   LogroProvider() {
-    _cargarDatosDeEjemplo();
+    _subSesion = FirebaseAuth.instance.authStateChanges().listen((usuario) {
+      _subCatalogo?.cancel();
+      _subObtenidos?.cancel();
+      _subCatalogo = null;
+      _subObtenidos = null;
+      _logros = [];
+      _obtenidos = [];
+      notifyListeners();
+      if (usuario == null) return;
+
+      _subCatalogo = _catalogo.snapshots().listen(
+        (snap) {
+          _logros =
+              snap.docs.map((d) => Logro.desdeMapa(d.id, d.data())).toList();
+          notifyListeners();
+        },
+        onError: (Object e) => _log('[Logros] No se pudo leer el catálogo: $e'),
+      );
+      // Los logros obtenidos son de la propia cuenta (solo los estudiantes
+      // tienen; para tutor y admin la lista queda vacía).
+      _subObtenidos = _obtenidosDe(usuario.uid).snapshots().listen(
+        (snap) {
+          _obtenidos = snap.docs
+              .map((d) => EstudianteLogro.desdeMapa(usuario.uid, d.id, d.data()))
+              .toList();
+          notifyListeners();
+        },
+        onError: (Object e) => _log('[Logros] No se pudieron leer los obtenidos: $e'),
+      );
+    });
   }
 
-  DateTime _enDias(int dias, int hora, int minuto) {
-    final h = DateTime.now();
-    return DateTime(h.year, h.month, h.day + dias, hora, minuto);
-  }
-
-  /// Sofía ya tiene 30 XP (3 tareas completadas), así que ya desbloqueó los
-  /// dos primeros logros en las fechas en que llegó a 10 y a 30 XP.
-  void _cargarDatosDeEjemplo() {
-    const sofiaId = '1';
-    _obtenidos.addAll([
-      EstudianteLogro(
-        id: '${_siguienteObtenidoId++}',
-        estudianteId: sofiaId,
-        logroId: '1',
-        fechaObtenido: _enDias(-9, 11, 0),
-      ),
-      EstudianteLogro(
-        id: '${_siguienteObtenidoId++}',
-        estudianteId: sofiaId,
-        logroId: '2',
-        fechaObtenido: _enDias(-1, 18, 30),
-      ),
-    ]);
+  @override
+  void dispose() {
+    _subCatalogo?.cancel();
+    _subObtenidos?.cancel();
+    _subSesion?.cancel();
+    super.dispose();
   }
 
   // -------------------------------------------------------------------
@@ -106,8 +138,15 @@ class LogroProvider extends ChangeNotifier {
   // -------------------------------------------------------------------
 
   /// Borra los logros obtenidos por un estudiante (al eliminar su cuenta).
-  void eliminarDeEstudiante(String estudianteId) {
-    _obtenidos.removeWhere((o) => o.estudianteId == estudianteId);
+  /// Se debe llamar ANTES de borrar la cuenta, mientras sigue con sesión.
+  Future<void> eliminarDeEstudiante(String estudianteId) async {
+    final snap = await _obtenidosDe(estudianteId).get();
+    final lote = _db.batch();
+    for (final d in snap.docs) {
+      lote.delete(d.reference);
+    }
+    await lote.commit();
+    _obtenidos = [];
     notifyListeners();
   }
 
@@ -117,13 +156,21 @@ class LogroProvider extends ChangeNotifier {
     final nuevos = <Logro>[];
     for (final logro in logros) {
       if (xp >= logro.xpRequerido && obtenido(estudianteId, logro.id) == null) {
+        final ahora = DateTime.now();
+        // Se agrega en memoria para avisar al instante, y se guarda en
+        // Firestore (el id del documento es el del logro: no se duplica).
         _obtenidos.add(
           EstudianteLogro(
-            id: '${_siguienteObtenidoId++}',
+            id: logro.id,
             estudianteId: estudianteId,
             logroId: logro.id,
-            fechaObtenido: DateTime.now(),
+            fechaObtenido: ahora,
           ),
+        );
+        _escribir(
+          _obtenidosDe(estudianteId)
+              .doc(logro.id)
+              .set({'fechaObtenido': Timestamp.fromDate(ahora)}),
         );
         nuevos.add(logro);
       }
@@ -168,15 +215,11 @@ class LogroProvider extends ChangeNotifier {
       xpRequerido: xpRequerido,
     );
     if (error != null) return error;
-    _logros.add(
-      Logro(
-        id: '${_siguienteLogroId++}',
-        nombre: nombre.trim(),
-        descripcion: descripcion.trim(),
-        xpRequerido: xpRequerido,
-      ),
-    );
-    notifyListeners();
+    _escribir(_catalogo.add({
+      'nombre': nombre.trim(),
+      'descripcion': descripcion.trim(),
+      'xpRequerido': xpRequerido,
+    }));
     return null;
   }
 
@@ -188,8 +231,7 @@ class LogroProvider extends ChangeNotifier {
     required String descripcion,
     required int xpRequerido,
   }) {
-    final i = _logros.indexWhere((l) => l.id == id);
-    if (i == -1) return 'El logro ya no existe';
+    if (porId(id) == null) return 'El logro ya no existe';
     final error = _validar(
       idActual: id,
       nombre: nombre,
@@ -197,13 +239,28 @@ class LogroProvider extends ChangeNotifier {
       xpRequerido: xpRequerido,
     );
     if (error != null) return error;
-    _logros[i] = Logro(
-      id: id,
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
-      xpRequerido: xpRequerido,
-    );
-    notifyListeners();
+    _escribir(_catalogo.doc(id).update({
+      'nombre': nombre.trim(),
+      'descripcion': descripcion.trim(),
+      'xpRequerido': xpRequerido,
+    }));
     return null;
+  }
+
+  /// Carga los logros de ejemplo (solo el admin; no borra los que ya hay).
+  Future<void> cargarCatalogoInicial() async {
+    final lote = _db.batch();
+    for (final l in catalogoInicial) {
+      lote.set(_catalogo.doc(l.id), l.aMapa());
+    }
+    await _escribir(lote.commit());
+  }
+
+  Future<void> _escribir(Future<Object?> operacion) async {
+    try {
+      await operacion;
+    } catch (e) {
+      _log('[Logros] No se pudo guardar: $e');
+    }
   }
 }

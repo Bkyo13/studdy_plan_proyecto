@@ -91,6 +91,28 @@ class AdminHome extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: AppText.pequeno,
               ),
+              // Catálogo vacío (por ejemplo, la primera vez): ofrece cargar
+              // las materias y logros de ejemplo.
+              if (totalMaterias == 0 || totalLogros == 0) ...[
+                const SizedBox(height: AppSpacing.entreSecciones),
+                OutlinedButton.icon(
+                  onPressed: () async {
+                    if (totalMaterias == 0) {
+                      await context.read<MateriaProvider>().cargarCatalogoInicial();
+                    }
+                    if (!context.mounted) return;
+                    if (totalLogros == 0) {
+                      await context.read<LogroProvider>().cargarCatalogoInicial();
+                    }
+                  },
+                  style: AppDecor.botonSecundario(),
+                  icon: const Icon(Icons.playlist_add),
+                  label: const Text(
+                    'Cargar catálogo inicial',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
               const SizedBox(height: 32),
               ElevatedButton.icon(
                 onPressed: () => Navigator.of(context).push(
