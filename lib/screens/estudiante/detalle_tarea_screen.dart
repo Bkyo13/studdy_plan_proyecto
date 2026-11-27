@@ -10,6 +10,7 @@ import '../../utils/color_hex.dart';
 import '../../utils/formato_fecha.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
+import '../../widgets/dialogo_logro.dart';
 import '../../widgets/etiqueta_prioridad.dart';
 import 'asistente_screen.dart';
 import 'nueva_tarea_screen.dart';
@@ -68,50 +69,7 @@ class DetalleTareaScreen extends StatelessWidget {
     );
     // Aviso al desbloquear uno o más logros.
     if (nuevos.isNotEmpty && context.mounted) {
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Column(
-            children: [
-              const Icon(Icons.emoji_events_outlined, size: 48, color: AppColors.verde),
-              const SizedBox(height: 8),
-              Text(
-                nuevos.length == 1 ? '¡Logro desbloqueado!' : '¡Logros desbloqueados!',
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final l in nuevos)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Column(
-                    children: [
-                      Text(
-                        l.nombre,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
-                      ),
-                      Text(l.descripcion, textAlign: TextAlign.center, style: AppText.pequeno),
-                    ],
-                  ),
-                ),
-            ],
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text(
-                'Genial',
-                style: TextStyle(color: AppColors.verde, fontWeight: FontWeight.w700),
-              ),
-            ),
-          ],
-        ),
-      );
+      await mostrarLogrosDesbloqueados(context, nuevos);
     }
 
     if (!context.mounted) return;
