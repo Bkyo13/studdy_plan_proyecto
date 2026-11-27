@@ -85,9 +85,16 @@ class AsistenteProvider extends ChangeNotifier {
       ));
     } catch (e) {
       _log('[Asistente] Error al consultar la IA: $e');
+      // App Check rechazó la petición: esta copia de la app no está
+      // certificada (por ejemplo, un APK compartido fuera de Google Play).
+      final porAppCheck = e.toString().toLowerCase().contains('app check');
       _mensajes.add(MensajeChat(
-        texto: 'No pude responder en este momento. Revisa tu conexión a '
-            'internet e intenta de nuevo.',
+        texto: porAppCheck
+            ? 'El asistente no está disponible en esta versión de la app. '
+                'Todo lo demás funciona normal; mientras, puedes organizar '
+                'tus tareas desde Inicio y el Calendario.'
+            : 'No pude responder en este momento. Revisa tu conexión a '
+                'internet e intenta de nuevo.',
         deUsuario: false,
         esError: true,
       ));
