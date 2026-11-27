@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../models/tarea.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../services/notificaciones_service.dart';
@@ -36,12 +35,12 @@ class _EstudianteHomeState extends State<EstudianteHome> {
   Future<void> _prepararAvisos() async {
     final usuario = context.read<AuthProvider>().usuarioActual;
     if (usuario == null) return;
-    final pendientes = context
+    // Escucha sus tareas en Firestore; con programarAvisos, cada cambio deja
+    // al día los recordatorios del teléfono.
+    context
         .read<TareaProvider>()
-        .tareasDe(usuario.id, estado: Estado.pendiente);
-    final avisos = NotificacionesService.instancia;
-    await avisos.pedirPermiso();
-    await avisos.sincronizar(pendientes);
+        .escuchar(usuario.id, programarAvisos: true);
+    await NotificacionesService.instancia.pedirPermiso();
   }
 
   @override

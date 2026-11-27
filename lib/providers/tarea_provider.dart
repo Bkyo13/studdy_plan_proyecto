@@ -1,93 +1,100 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/tarea.dart';
+import '../services/notificaciones_service.dart';
 
-/// Tareas de los estudiantes (en memoria, con datos de ejemplo para Sofía).
+/// Tareas de los estudiantes, guardadas en Firestore (`tareas/{id}`).
+///
+/// La app escucha solo las tareas de UN estudiante a la vez ([escuchar]):
+///   - el estudiante, las suyas;
+///   - el tutor, las del estudiante que tiene vinculado.
+/// Firestore manda los cambios en tiempo real, y como guarda una copia en el
+/// teléfono, la app también funciona sin internet (los cambios se suben
+/// cuando vuelve la conexión).
 class TareaProvider extends ChangeNotifier {
   /// XP que se gana por cada tarea completada (valor provisional, ajustable).
   static const int xpPorTarea = 10;
 
-  final List<Tarea> _tareas = [];
-  int _siguienteId = 1;
-
-  TareaProvider() {
-    _cargarDatosDeEjemplo();
+  static void _log(String mensaje) {
+    if (kDebugMode) debugPrint(mensaje);
   }
 
-  DateTime _enDias(int dias, int hora, int minuto) {
-    final h = DateTime.now();
-    return DateTime(h.year, h.month, h.day + dias, hora, minuto);
+  final CollectionReference<Map<String, dynamic>> _coleccion =
+      FirebaseFirestore.instance.collection('tareas');
+
+  List<Tarea> _tareas = [];
+  String? _estudianteEscuchado;
+  bool _programarAvisos = false;
+  bool _cargando = false;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _sub;
+
+  /// True mientras llega la primera lectura de Firestore.
+  bool get cargando => _cargando;
+
+  /// Empieza a escuchar las tareas de [estudianteId]. Si ya las estaba
+  /// escuchando, no hace nada. Con [programarAvisos] (solo el propio
+  /// estudiante), cada cambio deja al día los recordatorios del teléfono.
+  void escuchar(String estudianteId, {bool programarAvisos = false}) {
+    if (_estudianteEscuchado == estudianteId &&
+        _programarAvisos == programarAvisos &&
+        _sub != null) {
+      return;
+    }
+    _sub?.cancel();
+    _estudianteEscuchado = estudianteId;
+    _programarAvisos = programarAvisos;
+    _tareas = [];
+    _cargando = true;
+    notifyListeners();
+
+    _sub = _coleccion
+        .where('estudianteId', isEqualTo: estudianteId)
+        .snapshots()
+        .listen(
+      (snap) {
+        _tareas = snap.docs
+            .map((d) => Tarea.desdeMapa(d.id, d.data()))
+            .toList();
+        _cargando = false;
+        if (_programarAvisos) {
+          NotificacionesService.instancia.sincronizar(
+            _tareas.where((t) => t.estado == Estado.pendiente).toList(),
+          );
+        }
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _log('[Tareas] No se pudieron leer: $e');
+        _cargando = false;
+        notifyListeners();
+      },
+    );
   }
 
-  void _cargarDatosDeEjemplo() {
-    const sofiaId = '1';
-    _tareas.addAll([
-      Tarea(
-        id: '${_siguienteId++}',
-        nombre: 'Resolver problemario de derivadas',
-        descripcion:
-            'Completar los ejercicios del 1 al 15 de la sección 4.2 del libro de texto. '
-            'Es necesario mostrar todo el procedimiento y justificar la regla de la '
-            'cadena aplicada en cada solución. Entregar en formato PDF.',
-        fechaEntrega: _enDias(1, 14, 0),
-        prioridad: Prioridad.alta,
-        materiaId: '1',
-        estudianteId: sofiaId,
-      ),
-      Tarea(
-        id: '${_siguienteId++}',
-        nombre: 'Rehacer todo el CSS de mi web',
-        descripcion:
-            'Reescribir los estilos del sitio con flexbox y variables de color.',
-        fechaEntrega: _enDias(3, 23, 59),
-        prioridad: Prioridad.media,
-        materiaId: '2',
-        estudianteId: sofiaId,
-      ),
-      Tarea(
-        id: '${_siguienteId++}',
-        nombre: 'Hacer las torres de hanoi',
-        descripcion: 'Implementar la solución recursiva y probarla con 3 y 4 discos.',
-        fechaEntrega: _enDias(5, 10, 0),
-        prioridad: Prioridad.baja,
-        materiaId: '3',
-        estudianteId: sofiaId,
-      ),
-      Tarea(
-        id: '${_siguienteId++}',
-        nombre: 'Lectura de capítulos 1 y 2',
-        descripcion: 'Leer los dos primeros capítulos y preparar un resumen.',
-        fechaEntrega: _enDias(-1, 23, 59),
-        prioridad: Prioridad.media,
-        materiaId: '4',
-        estudianteId: sofiaId,
-        estado: Estado.completada,
-        fechaCompletada: _enDias(-1, 18, 30),
-      ),
-      Tarea(
-        id: '${_siguienteId++}',
-        nombre: 'Maqueta de célula animal',
-        descripcion: 'Maqueta con las partes principales de la célula, rotuladas.',
-        fechaEntrega: _enDias(-3, 12, 0),
-        prioridad: Prioridad.baja,
-        materiaId: '5',
-        estudianteId: sofiaId,
-        estado: Estado.completada,
-        fechaCompletada: _enDias(-3, 9, 15),
-      ),
-      Tarea(
-        id: '${_siguienteId++}',
-        nombre: 'Investigación de vectores',
-        descripcion: 'Investigar operaciones con vectores y entregar un resumen de dos páginas.',
-        fechaEntrega: _enDias(-9, 12, 0),
-        prioridad: Prioridad.alta,
-        materiaId: '6',
-        estudianteId: sofiaId,
-        estado: Estado.completada,
-        fechaCompletada: _enDias(-9, 11, 0),
-      ),
-    ]);
+  /// Deja de escuchar (al cerrar sesión o desvincular).
+  void detener() {
+    if (_sub == null && _estudianteEscuchado == null) return;
+    _sub?.cancel();
+    _sub = null;
+    _estudianteEscuchado = null;
+    _programarAvisos = false;
+    _tareas = [];
+    _cargando = false;
+    notifyListeners();
   }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
+  }
+
+  // ---------------------------------------------------------------------
+  // Consultas (sobre las tareas que se están escuchando)
+  // ---------------------------------------------------------------------
 
   /// Tareas de un estudiante. Pendientes por fecha de entrega (la más próxima
   /// primero) y completadas de la más reciente a la más antigua.
@@ -145,78 +152,104 @@ class TareaProvider extends ChangeNotifier {
         .length;
   }
 
-  void agregar({
+  // ---------------------------------------------------------------------
+  // Cambios (se guardan en Firestore; la lista se actualiza sola al llegar
+  // el cambio, incluso sin internet)
+  // ---------------------------------------------------------------------
+
+  Future<void> agregar({
     required String nombre,
     required String descripcion,
     required DateTime fechaEntrega,
     required Prioridad prioridad,
     required String materiaId,
     required String estudianteId,
-  }) {
-    _tareas.add(Tarea(
-      id: '${_siguienteId++}',
+  }) async {
+    final doc = _coleccion.doc();
+    final nueva = Tarea(
+      id: doc.id,
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
       fechaEntrega: fechaEntrega,
       prioridad: prioridad,
       materiaId: materiaId,
       estudianteId: estudianteId,
-    ));
-    notifyListeners();
+    );
+    await _guardar(() => doc.set(nueva.aMapa()));
   }
 
-  void actualizar({
+  Future<void> actualizar({
     required String id,
     required String nombre,
     required String descripcion,
     required DateTime fechaEntrega,
     required Prioridad prioridad,
     required String materiaId,
-  }) {
-    final i = _tareas.indexWhere((t) => t.id == id);
-    if (i == -1) return;
-    final anterior = _tareas[i];
-    _tareas[i] = Tarea(
-      id: id,
-      nombre: nombre.trim(),
-      descripcion: descripcion.trim(),
-      fechaEntrega: fechaEntrega,
-      prioridad: prioridad,
-      materiaId: materiaId,
-      estudianteId: anterior.estudianteId,
-      estado: anterior.estado,
-      fechaCompletada: anterior.fechaCompletada,
-    );
-    notifyListeners();
+  }) async {
+    await _guardar(() => _coleccion.doc(id).update({
+          'nombre': nombre.trim(),
+          'descripcion': descripcion.trim(),
+          'fechaEntrega': Timestamp.fromDate(fechaEntrega),
+          'prioridad': prioridad.name,
+          'materiaId': materiaId,
+        }));
   }
 
-  void completar(String id) {
+  Future<void> completar(String id) async {
     final tarea = porId(id);
     if (tarea == null || tarea.estado == Estado.completada) return;
+    final ahora = DateTime.now();
+    // Se marca también en memoria para que XP y logros se calculen al
+    // instante (justo después de completar se evalúan los logros).
     tarea.estado = Estado.completada;
-    tarea.fechaCompletada = DateTime.now();
+    tarea.fechaCompletada = ahora;
     notifyListeners();
+    await _guardar(() => _coleccion.doc(id).update({
+          'estado': Estado.completada.name,
+          'fechaCompletada': Timestamp.fromDate(ahora),
+        }));
   }
 
   /// Regresa una tarea completada a pendiente (botón "Deshacer" o
   /// "Marcar como pendiente"). El XP baja solo, porque se calcula a partir
   /// de las tareas completadas.
-  void reabrir(String id) {
+  Future<void> reabrir(String id) async {
     final tarea = porId(id);
     if (tarea == null || tarea.estado == Estado.pendiente) return;
     tarea.estado = Estado.pendiente;
     tarea.fechaCompletada = null;
     notifyListeners();
+    await _guardar(() => _coleccion.doc(id).update({
+          'estado': Estado.pendiente.name,
+          'fechaCompletada': null,
+        }));
   }
 
-  /// Borra todas las tareas de un estudiante (al eliminar su cuenta).
-  void eliminarDeEstudiante(String estudianteId) {
-    _tareas.removeWhere((t) => t.estudianteId == estudianteId);
-    notifyListeners();
+  Future<void> eliminar(String id) async {
+    await _guardar(() => _coleccion.doc(id).delete());
   }
 
-  void eliminar(String id) {
-    _tareas.removeWhere((t) => t.id == id);
-    notifyListeners();
+  /// Borra todas las tareas de un estudiante (al eliminar su cuenta). Se
+  /// debe llamar ANTES de borrar la cuenta, mientras sigue con sesión.
+  Future<void> eliminarDeEstudiante(String estudianteId) async {
+    final snap =
+        await _coleccion.where('estudianteId', isEqualTo: estudianteId).get();
+    final lote = FirebaseFirestore.instance.batch();
+    for (final d in snap.docs) {
+      lote.delete(d.reference);
+    }
+    await lote.commit();
+    await NotificacionesService.instancia.cancelarTodas();
+  }
+
+  /// Sin internet, Firestore guarda el cambio en el teléfono y lo sube
+  /// después; el Future no termina hasta entonces, así que no se espera de
+  /// más: solo se registra si falla (por ejemplo, por las reglas).
+  Future<void> _guardar(Future<void> Function() operacion) async {
+    try {
+      await operacion();
+    } catch (e) {
+      _log('[Tareas] No se pudo guardar el cambio: $e');
+    }
   }
 }

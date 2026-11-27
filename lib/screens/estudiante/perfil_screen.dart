@@ -184,6 +184,23 @@ class _PerfilScreenState extends State<PerfilScreen> {
     final vinculos = context.read<VinculoProvider>();
     final id = usuario.id;
 
+    // Primero sus datos (las reglas de Firestore exigen que siga con sesión)
+    // y al final la cuenta.
+    try {
+      await tareas.eliminarDeEstudiante(id);
+      await vinculos.eliminarDeEstudiante(id);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      mostrarMensaje(
+        context,
+        'No se pudieron borrar tus datos. Revisa tu conexión.',
+        error: true,
+      );
+      return;
+    }
+    logros.eliminarDeEstudiante(id);
+    tareas.detener();
     final error = await auth.eliminarCuenta();
     if (!mounted) return;
     if (error != null) {
@@ -191,9 +208,6 @@ class _PerfilScreenState extends State<PerfilScreen> {
       mostrarMensaje(context, error, error: true);
       return;
     }
-    tareas.eliminarDeEstudiante(id);
-    logros.eliminarDeEstudiante(id);
-    vinculos.eliminarDeEstudiante(id);
     mostrarMensaje(context, 'Tu cuenta fue eliminada');
     Navigator.of(context).pop();
   }

@@ -5,25 +5,70 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Perfiles de usuario: usuarios/{uid}
+    function logueado() {
+      return request.auth != null;
+    }
+
+    // ¿El usuario con sesión es el tutor vinculado a este estudiante?
+    function esTutorDe(estudianteId) {
+      let ruta = /databases/$(database)/documents/vinculos/$(request.auth.uid);
+      return exists(ruta) && get(ruta).data.estudianteId == estudianteId;
+    }
+
+    // ---------------- Perfiles: usuarios/{uid} ----------------
     match /usuarios/{uid} {
       // Cualquier usuario con sesión puede leer perfiles (el tutor busca al
       // estudiante por correo y el admin ve los totales).
-      allow read: if request.auth != null;
+      allow read: if logueado();
 
       // Cada quien crea solo SU perfil, y solo como estudiante o tutor.
       // El rol de administrador se asigna a mano desde la consola.
-      allow create: if request.auth != null
+      allow create: if logueado()
                     && request.auth.uid == uid
                     && request.resource.data.rol in ['estudiante', 'tutor'];
 
       // Cada quien edita solo su perfil y no puede cambiarse el rol.
-      allow update: if request.auth != null
+      allow update: if logueado()
                     && request.auth.uid == uid
                     && request.resource.data.rol == resource.data.rol;
 
       // Cada quien puede borrar solo su perfil (al eliminar su cuenta).
-      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow delete: if logueado() && request.auth.uid == uid;
+    }
+
+    // ---------------- Tareas: tareas/{tareaId} ----------------
+    match /tareas/{tareaId} {
+      // Las lee su dueño y el tutor vinculado a él (solo lectura).
+      allow read: if logueado()
+                  && (resource.data.estudianteId == request.auth.uid
+                      || esTutorDe(resource.data.estudianteId));
+
+      // Solo el estudiante crea, edita y borra SUS tareas.
+      allow create: if logueado()
+                    && request.resource.data.estudianteId == request.auth.uid;
+      allow update: if logueado()
+                    && resource.data.estudianteId == request.auth.uid
+                    && request.resource.data.estudianteId == request.auth.uid;
+      allow delete: if logueado()
+                    && resource.data.estudianteId == request.auth.uid;
+    }
+
+    // ---------------- Vínculos: vinculos/{tutorId} ----------------
+    match /vinculos/{tutorId} {
+      // Lo ve el tutor y el estudiante vinculado.
+      allow read: if logueado()
+                  && (request.auth.uid == tutorId
+                      || resource.data.estudianteId == request.auth.uid);
+
+      // Solo el tutor crea o cambia su propio vínculo.
+      allow create, update: if logueado()
+                            && request.auth.uid == tutorId
+                            && request.resource.data.tutorId == tutorId;
+
+      // Lo puede quitar el tutor, o el estudiante (al eliminar su cuenta).
+      allow delete: if logueado()
+                    && (request.auth.uid == tutorId
+                        || resource.data.estudianteId == request.auth.uid);
     }
 
     // Todo lo demás queda cerrado hasta que se agreguen sus reglas.

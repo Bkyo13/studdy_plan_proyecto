@@ -63,9 +63,28 @@ class TutorHome extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final tutor = auth.usuarioActual;
-    final estudianteId =
-        tutor == null ? null : context.watch<VinculoProvider>().estudianteIdDe(tutor.id);
+    final vinculos = context.watch<VinculoProvider>();
+    final estudianteId = tutor == null ? null : vinculos.estudianteIdDe(tutor.id);
     final estudiante = estudianteId == null ? null : auth.porId(estudianteId);
+    // Mientras llegan el vínculo o el perfil del estudiante desde Firestore.
+    final cargando =
+        vinculos.cargando || (estudianteId != null && estudiante == null);
+
+    // Escucha el vínculo del tutor y las tareas del estudiante vinculado.
+    // (Se hace después de dibujar; las dos llamadas no hacen nada si ya
+    // estaban escuchando lo mismo.)
+    if (tutor != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        context.read<VinculoProvider>().escuchar(tutor.id);
+        final tareas = context.read<TareaProvider>();
+        if (estudianteId != null) {
+          tareas.escuchar(estudianteId);
+        } else if (!vinculos.cargando) {
+          tareas.detener();
+        }
+      });
+    }
 
     return Scaffold(
       body: SafeArea(
@@ -95,7 +114,14 @@ class TutorHome extends StatelessWidget {
                 style: AppText.cuerpo,
               ),
               const SizedBox(height: AppSpacing.entreSecciones),
-              if (estudiante == null) ...[
+              if (cargando)
+                const Padding(
+                  padding: EdgeInsets.only(top: 80),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.verde),
+                  ),
+                )
+              else if (estudiante == null) ...[
                 const EstadoVacio(
                   icono: Icons.person_add_alt_1_outlined,
                   titulo: 'Aún no tienes un estudiante vinculado',
