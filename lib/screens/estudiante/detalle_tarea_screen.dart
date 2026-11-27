@@ -62,7 +62,7 @@ class DetalleTareaScreen extends StatelessWidget {
     final tareas = context.read<TareaProvider>();
     final logros = context.read<LogroProvider>();
 
-    tareas.completar(tarea.id);
+    final puntos = tareas.completar(tarea.id);
     final nuevos = logros.evaluar(
       tarea.estudianteId,
       tareas.xpDe(tarea.estudianteId),
@@ -76,7 +76,9 @@ class DetalleTareaScreen extends StatelessWidget {
     // El aviso va al final para que no lo tape el cuadro del logro.
     mostrarMensaje(
       context,
-      '¡Tarea completada! +${TareaProvider.xpPorTarea} XP',
+      puntos > 0
+          ? '¡Tarea completada! +$puntos XP'
+          : '¡Tarea completada! (sin XP: se completó muy rápido)',
       accion: 'Deshacer',
       onAccion: () => tareas.reabrir(tarea.id),
     );

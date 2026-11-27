@@ -31,7 +31,7 @@ class LogroDetalleScreen extends StatelessWidget {
     final avance = desbloqueado ? logro.xpRequerido : xp.clamp(0, logro.xpRequerido);
     final progreso = avance / logro.xpRequerido;
     final faltan = logro.xpRequerido - xp;
-    final tareasFaltantes = (faltan / TareaProvider.xpPorTarea).ceil();
+    final tareasFaltantes = (faltan / TareaProvider.xpTareaTipica).ceil();
 
     return Scaffold(
       body: SafeArea(
@@ -127,8 +127,11 @@ class LogroDetalleScreen extends StatelessWidget {
                         _titulo('REQUISITO'),
                         const SizedBox(height: 8),
                         Text(
-                          'Acumular ${logro.xpRequerido} XP completando tareas '
-                          '(cada tarea completada da ${TareaProvider.xpPorTarea} XP).',
+                          'Acumular ${logro.xpRequerido} XP completando tareas. '
+                          'Prioridad alta da ${TareaProvider.xpAlta} XP, media '
+                          '${TareaProvider.xpMedia} y baja ${TareaProvider.xpBaja}; '
+                          '+${TareaProvider.bonoATiempo} si la entregas a tiempo y la '
+                          'mitad si es tarde.',
                           style: const TextStyle(
                             fontSize: 16,
                             height: 1.5,

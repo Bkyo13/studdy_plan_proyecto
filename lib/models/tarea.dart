@@ -15,6 +15,10 @@ class Tarea {
   Estado estado;
   DateTime? fechaCompletada;
 
+  /// Cuándo se creó (para el anti-trampa del XP). Las tareas creadas antes
+  /// de este cambio no la tienen.
+  final DateTime? fechaCreacion;
+
   Tarea({
     required this.id,
     required this.nombre,
@@ -25,6 +29,7 @@ class Tarea {
     required this.estudianteId,
     this.estado = Estado.pendiente,
     this.fechaCompletada,
+    this.fechaCreacion,
   });
 
   /// Sigue pendiente y ya pasó su fecha y hora de entrega.
@@ -50,6 +55,7 @@ class Tarea {
           ? Estado.completada
           : Estado.pendiente,
       fechaCompletada: fecha(datos['fechaCompletada']),
+      fechaCreacion: fecha(datos['fechaCreacion']),
     );
   }
 
@@ -64,5 +70,7 @@ class Tarea {
         'estado': estado.name,
         'fechaCompletada':
             fechaCompletada == null ? null : Timestamp.fromDate(fechaCompletada!),
+        if (fechaCreacion != null)
+          'fechaCreacion': Timestamp.fromDate(fechaCreacion!),
       };
 }

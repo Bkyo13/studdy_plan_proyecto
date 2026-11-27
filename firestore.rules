@@ -47,6 +47,21 @@ service cloud.firestore {
       match /logros/{logroId} {
         allow read, create, delete: if logueado() && request.auth.uid == uid;
       }
+
+      // Historial de XP: usuarios/{uid}/xp/{tareaId}
+      // Lo ve el estudiante y su tutor. Solo el estudiante lo crea (al
+      // completar) o lo borra (al deshacer o eliminar su cuenta), con un
+      // máximo de 20 puntos por tarea. No se puede editar.
+      match /xp/{tareaId} {
+        allow read: if logueado()
+                    && (request.auth.uid == uid || esTutorDe(uid));
+        allow create: if logueado()
+                      && request.auth.uid == uid
+                      && request.resource.data.puntos is int
+                      && request.resource.data.puntos >= 0
+                      && request.resource.data.puntos <= 20;
+        allow delete: if logueado() && request.auth.uid == uid;
+      }
     }
 
     // ---------------- Catálogos: materias y logros ----------------
