@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'enums.dart';
+import 'subtarea.dart';
 
 export 'enums.dart';
+export 'subtarea.dart';
 
 class Tarea {
   final String id;
@@ -19,6 +21,9 @@ class Tarea {
   /// de este cambio no la tienen.
   final DateTime? fechaCreacion;
 
+  /// Pasos de la tarea (checklist). Puede estar vacía.
+  List<Subtarea> subtareas;
+
   Tarea({
     required this.id,
     required this.nombre,
@@ -30,7 +35,14 @@ class Tarea {
     this.estado = Estado.pendiente,
     this.fechaCompletada,
     this.fechaCreacion,
+    this.subtareas = const [],
   });
+
+  int get subtareasHechas => subtareas.where((s) => s.hecha).length;
+
+  /// Avance de los pasos, de 0 a 1 (0 si no tiene pasos).
+  double get avanceSubtareas =>
+      subtareas.isEmpty ? 0 : subtareasHechas / subtareas.length;
 
   /// Sigue pendiente y ya pasó su fecha y hora de entrega.
   bool get vencida =>
@@ -56,6 +68,10 @@ class Tarea {
           : Estado.pendiente,
       fechaCompletada: fecha(datos['fechaCompletada']),
       fechaCreacion: fecha(datos['fechaCreacion']),
+      subtareas: (datos['subtareas'] as List<dynamic>? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(Subtarea.desdeMapa)
+          .toList(),
     );
   }
 
@@ -72,5 +88,6 @@ class Tarea {
             fechaCompletada == null ? null : Timestamp.fromDate(fechaCompletada!),
         if (fechaCreacion != null)
           'fechaCreacion': Timestamp.fromDate(fechaCreacion!),
+        'subtareas': subtareas.map((s) => s.aMapa()).toList(),
       };
 }

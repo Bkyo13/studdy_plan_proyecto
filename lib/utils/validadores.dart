@@ -29,6 +29,8 @@ class Limites {
   static const contrasena = 60;
   static const nombreTarea = 100;
   static const descripcionTarea = 500;
+  static const textoSubtarea = 80;
+  static const subtareasPorTarea = 20;
   static const nombreMateria = 60;
   static const nombreLogro = 60;
   static const descripcionLogro = 150;

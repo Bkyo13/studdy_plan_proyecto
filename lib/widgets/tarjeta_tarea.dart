@@ -64,6 +64,10 @@ class TarjetaTarea extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(tarea.nombre, style: AppText.tituloTarjeta),
+        if (tarea.subtareas.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _avancePasos(),
+        ],
         const SizedBox(height: 12),
         Row(
           children: [
@@ -87,6 +91,30 @@ class TarjetaTarea extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ],
+    );
+  }
+
+  /// Barra delgada con "2/5 pasos" cuando la tarea tiene checklist.
+  Widget _avancePasos() {
+    return Row(
+      children: [
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(3),
+            child: LinearProgressIndicator(
+              value: tarea.avanceSubtareas,
+              minHeight: 5,
+              backgroundColor: AppColors.verdeClaro,
+              color: AppColors.verde,
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          '${tarea.subtareasHechas}/${tarea.subtareas.length} pasos',
+          style: AppText.pequeno,
         ),
       ],
     );

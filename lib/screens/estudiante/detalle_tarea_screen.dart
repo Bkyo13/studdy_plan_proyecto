@@ -11,10 +11,12 @@ import '../../utils/formato_fecha.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/etiqueta_prioridad.dart';
+import '../../widgets/lista_subtareas.dart';
 import 'asistente_screen.dart';
 import 'nueva_tarea_screen.dart';
 
-/// Detalle de una tarea: instrucciones, fecha, y acciones de completar/eliminar.
+/// Detalle de una tarea: instrucciones, pasos (checklist), fecha, y acciones
+/// de completar/eliminar.
 /// Con [soloLectura] (vista del tutor) se ocultan todas las acciones.
 class DetalleTareaScreen extends StatelessWidget {
   final String tareaId;
@@ -201,6 +203,19 @@ class DetalleTareaScreen extends StatelessWidget {
                             color: AppColors.textoSuave,
                           ),
                         ),
+                        // Pasos: se editan solo si sigue pendiente y no es
+                        // la vista del tutor. Sin pasos y sin poder editar,
+                        // la sección no aparece.
+                        if (tarea.subtareas.isNotEmpty ||
+                            (pendiente && !soloLectura)) ...[
+                          const SizedBox(height: 16),
+                          const Divider(color: AppColors.borde),
+                          const SizedBox(height: 12),
+                          ListaSubtareas(
+                            tarea: tarea,
+                            editable: pendiente && !soloLectura,
+                          ),
+                        ],
                         const SizedBox(height: 16),
                         const Divider(color: AppColors.borde),
                         const SizedBox(height: 12),

@@ -86,12 +86,15 @@ service cloud.firestore {
                   && (resource.data.estudianteId == request.auth.uid
                       || esTutorDe(resource.data.estudianteId));
 
-      // Solo el estudiante crea, edita y borra SUS tareas.
+      // Solo el estudiante crea, edita y borra SUS tareas, con un máximo
+      // de 20 pasos (subtareas) por tarea.
       allow create: if logueado()
-                    && request.resource.data.estudianteId == request.auth.uid;
+                    && request.resource.data.estudianteId == request.auth.uid
+                    && request.resource.data.get('subtareas', []).size() <= 20;
       allow update: if logueado()
                     && resource.data.estudianteId == request.auth.uid
-                    && request.resource.data.estudianteId == request.auth.uid;
+                    && request.resource.data.estudianteId == request.auth.uid
+                    && request.resource.data.get('subtareas', []).size() <= 20;
       allow delete: if logueado()
                     && resource.data.estudianteId == request.auth.uid;
     }

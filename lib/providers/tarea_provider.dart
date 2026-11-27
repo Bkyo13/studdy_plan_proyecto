@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import '../models/registro_xp.dart';
 import '../models/tarea.dart';
 import '../services/notificaciones_service.dart';
+import '../utils/validadores.dart';
 
 /// Tareas de los estudiantes, guardadas en Firestore (`tareas/{id}`).
 ///
@@ -312,6 +313,47 @@ class TareaProvider extends ChangeNotifier {
           'fechaCompletada': null,
         }));
     await _guardar(() => _xpDe(tarea.estudianteId).doc(id).delete());
+  }
+
+  // ---------------------------- Subtareas ----------------------------
+
+  /// Agrega un paso al final de la lista. No hace nada si el texto está
+  /// vacío o si ya tiene el máximo de pasos.
+  void agregarSubtarea(String id, String texto) {
+    final tarea = porId(id);
+    final limpio = texto.trim();
+    if (tarea == null ||
+        limpio.isEmpty ||
+        tarea.subtareas.length >= Limites.subtareasPorTarea) {
+      return;
+    }
+    _guardarSubtareas(tarea, [...tarea.subtareas, Subtarea(texto: limpio)]);
+  }
+
+  /// Marca o desmarca el paso número [indice].
+  void alternarSubtarea(String id, int indice) {
+    final tarea = porId(id);
+    if (tarea == null || indice < 0 || indice >= tarea.subtareas.length) return;
+    final lista = [...tarea.subtareas];
+    lista[indice] = lista[indice].alternada();
+    _guardarSubtareas(tarea, lista);
+  }
+
+  void eliminarSubtarea(String id, int indice) {
+    final tarea = porId(id);
+    if (tarea == null || indice < 0 || indice >= tarea.subtareas.length) return;
+    final lista = [...tarea.subtareas]..removeAt(indice);
+    _guardarSubtareas(tarea, lista);
+  }
+
+  /// Cambia la lista en memoria (la pantalla responde al instante) y la
+  /// guarda en Firestore en segundo plano.
+  void _guardarSubtareas(Tarea tarea, List<Subtarea> lista) {
+    tarea.subtareas = lista;
+    notifyListeners();
+    _guardar(() => _coleccion.doc(tarea.id).update({
+          'subtareas': lista.map((s) => s.aMapa()).toList(),
+        }));
   }
 
   /// Borra la tarea. El XP que ya dio se queda (está en el historial).
