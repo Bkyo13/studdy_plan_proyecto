@@ -179,6 +179,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
       mostrarMensaje(context, 'La contraseña no es correcta', error: true);
       return;
     }
+    // Cuentas de Google: se confirma eligiendo la cuenta otra vez.
+    if (!usuario.accesoLocal && !await auth.reautenticarConGoogle()) {
+      if (!mounted) return;
+      setState(() => _guardando = false);
+      mostrarMensaje(context, 'No se pudo confirmar tu cuenta de Google', error: true);
+      return;
+    }
     if (!mounted) return;
 
     final tareas = context.read<TareaProvider>();
@@ -297,6 +304,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                     const SizedBox(height: 8),
                     TextFormField(
                       controller: _correoCtrl,
+                      // Con Google, el correo es el de la cuenta de Google.
+                      readOnly: !usuario.accesoLocal,
                       inputFormatters: [
                         LengthLimitingTextInputFormatter(Limites.correo),
                       ],

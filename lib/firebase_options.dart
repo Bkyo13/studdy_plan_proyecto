@@ -62,13 +62,13 @@ class DefaultFirebaseOptions {
     projectId: 'studyplan-d50e0',
     storageBucket: 'studyplan-d50e0.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBlv8w6rWw5drHXM4VdnQVNNDsgxxRQBds',
     appId: '1:754287645731:ios:2228a9148c8c75bca04d96',
     messagingSenderId: '754287645731',
     projectId: 'studyplan-d50e0',
     storageBucket: 'studyplan-d50e0.firebasestorage.app',
+    iosClientId: '754287645731-dm4ao5q3u7qqsmkqntil1hs92gjeq8u8.apps.googleusercontent.com',
     iosBundleId: 'com.diegohernandez.studyplan',
   );
 }

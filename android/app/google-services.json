@@ -12,7 +12,12 @@
           "package_name": "com.diegohernandez.studyplan"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "754287645731-2gr3safs125knda3llbvecpmirgu9h9p.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAQo6IMjEdxDBxb6bqZ0NpgBgr953V-U9M"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "754287645731-2gr3safs125knda3llbvecpmirgu9h9p.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "754287645731-dm4ao5q3u7qqsmkqntil1hs92gjeq8u8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.diegohernandez.studyplan"
+              }
+            }
+          ]
         }
       }
     }

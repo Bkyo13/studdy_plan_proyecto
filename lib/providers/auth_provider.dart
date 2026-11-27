@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/usuario.dart';
@@ -33,10 +34,19 @@ class AuthProvider extends ChangeNotifier {
 
   Usuario? _usuarioActual;
   bool _sesionRecordada = true;
+
+  /// Cuenta de Google que entró por primera vez y todavía no tiene perfil:
+  /// la pantalla de login le pide elegir si es estudiante o tutor.
+  User? _googleSinPerfil;
+  bool _googleListo = false;
   List<Usuario> _usuarios = [];
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _subUsuarios;
 
   Usuario? get usuarioActual => _usuarioActual;
+
+  /// True cuando alguien entró con Google por primera vez y falta elegir rol
+  /// ([completarRegistroGoogle] o [cancelarRegistroGoogle]).
+  bool get necesitaElegirRol => _googleSinPerfil != null;
 
   /// Si la sesión se mantiene al cerrar y volver a abrir la app.
   bool get sesionRecordada => _sesionRecordada;
@@ -236,6 +246,123 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  // ---------------------------------------------------------------------
+  // Inicio de sesión con Google
+  // ---------------------------------------------------------------------
+
+  Future<void> _inicializarGoogle() async {
+    if (_googleListo) return;
+    await GoogleSignIn.instance.initialize();
+    _googleListo = true;
+  }
+
+  /// Abre la ventana de Google. Devuelve null si entró (o si el usuario
+  /// cerró la ventana) y un mensaje si hubo error. Si es la primera vez,
+  /// queda [necesitaElegirRol] en true.
+  Future<String?> iniciarConGoogle() async {
+    try {
+      await _inicializarGoogle();
+      final cuenta = await GoogleSignIn.instance.authenticate();
+      final idToken = cuenta.authentication.idToken;
+      final cred = await _auth.signInWithCredential(
+        GoogleAuthProvider.credential(idToken: idToken),
+      );
+      final usuarioFirebase = cred.user!;
+      await cambiarRecordarSesion(true);
+
+      final yaTienePerfil = await _cargarPerfil(usuarioFirebase);
+      if (!yaTienePerfil) {
+        _googleSinPerfil = usuarioFirebase;
+        notifyListeners();
+        _log('[Sesion] Cuenta de Google nueva: falta elegir rol.');
+      } else {
+        _log('[Sesion] Inicio de sesión con Google correcto.');
+      }
+      return null;
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        _log('[Sesion] Inicio con Google cancelado.');
+        return null;
+      }
+      _log('[Sesion] Error de Google: ${e.code} ${e.description ?? ''}');
+      return 'No se pudo iniciar sesión con Google. Intenta de nuevo.';
+    } on FirebaseAuthException catch (e) {
+      _log('[Sesion] Error al entrar con Google: ${e.code}');
+      if (e.code == 'account-exists-with-different-credential') {
+        return 'Ese correo ya tiene una cuenta con contraseña. Entra con tu correo y contraseña.';
+      }
+      return _mensajeDeError(e.code);
+    } catch (e) {
+      _log('[Sesion] Error al entrar con Google: $e');
+      return 'No se pudo iniciar sesión con Google. Intenta de nuevo.';
+    }
+  }
+
+  /// Crea el perfil de quien entró con Google por primera vez.
+  Future<String?> completarRegistroGoogle(Rol rol) async {
+    final u = _googleSinPerfil;
+    if (u == null) return 'No hay un registro pendiente';
+    if (rol == Rol.administrador) {
+      return 'Ese tipo de cuenta no se puede crear desde la app';
+    }
+    final correo = (u.email ?? '').toLowerCase();
+    final nombre = (u.displayName?.trim().isNotEmpty ?? false)
+        ? u.displayName!.trim()
+        : correo.split('@').first;
+    final usuario = Usuario(
+      id: u.uid,
+      nombre: nombre.length > 50 ? nombre.substring(0, 50) : nombre,
+      correo: correo,
+      rol: rol,
+      proveedor: 'google',
+    );
+    try {
+      await _coleccion.doc(usuario.id).set({
+        ...usuario.aMapa(),
+        'fechaRegistro': FieldValue.serverTimestamp(),
+      });
+      _googleSinPerfil = null;
+      _usuarioActual = usuario;
+      _escucharUsuarios();
+      _log('[Cuenta] Cuenta de Google registrada (rol: ${rol.name}).');
+      notifyListeners();
+      return null;
+    } catch (e) {
+      _log('[Cuenta] Error al guardar el perfil de Google: $e');
+      return 'No se pudo crear tu perfil. Revisa tu conexión.';
+    }
+  }
+
+  /// Si cierra la ventana de elegir rol, no se queda a medias: sale.
+  Future<void> cancelarRegistroGoogle() async {
+    final u = _googleSinPerfil;
+    _googleSinPerfil = null;
+    notifyListeners();
+    try {
+      // La cuenta de Firebase recién creada no tiene datos: se borra.
+      await u?.delete();
+    } catch (_) {}
+    await cerrarSesion();
+  }
+
+  /// Confirma la identidad con Google otra vez (Firebase la pide antes de
+  /// borrar una cuenta). Devuelve true si se confirmó.
+  Future<bool> reautenticarConGoogle() async {
+    final u = _auth.currentUser;
+    if (u == null) return false;
+    try {
+      await _inicializarGoogle();
+      final cuenta = await GoogleSignIn.instance.authenticate();
+      await u.reauthenticateWithCredential(
+        GoogleAuthProvider.credential(idToken: cuenta.authentication.idToken),
+      );
+      return true;
+    } catch (e) {
+      _log('[Cuenta] Reautenticación con Google fallida: $e');
+      return false;
+    }
+  }
+
   Future<void> cerrarSesion() async {
     await _subUsuarios?.cancel();
     _subUsuarios = null;
@@ -244,6 +371,8 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
     try {
       await _auth.signOut();
+      // Para que la próxima vez deje elegir otra cuenta de Google.
+      if (_googleListo) await GoogleSignIn.instance.signOut();
       _log('[Sesion] Sesión cerrada.');
     } catch (e) {
       _log('[Sesion] Error al cerrar sesión: $e');

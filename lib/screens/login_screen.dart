@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/usuario.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/mensajes.dart';
@@ -45,10 +46,6 @@ class _LoginScreenState extends State<LoginScreen> {
       mostrarMensaje(context, error, error: true);
     }
     // Si no hay error, AuthGate detecta la sesión y abre el dashboard del rol.
-  }
-
-  void _proximamente(String funcion) {
-    mostrarMensaje(context, '$funcion estará disponible en una próxima versión');
   }
 
   void _irARecuperar() {
@@ -228,49 +225,113 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  /// Solo Google. "Iniciar sesión con Apple" necesita la cuenta de pago de
+  /// Apple Developer; se agregará cuando la app se publique en la App Store.
   Widget _botonesSociales() {
-    return Row(
-      children: [
-        Expanded(
-          child: _botonSocial(
-            icono: const Text(
-              'G',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: Color(0xFF4285F4),
-              ),
-            ),
-            texto: 'Google',
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _botonSocial(
-            icono: const Icon(Icons.apple, color: AppColors.texto, size: 24),
-            texto: 'Apple',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _botonSocial({required Widget icono, required String texto}) {
     return OutlinedButton(
-      onPressed: () => _proximamente('Iniciar sesión con $texto'),
+      onPressed: _cargando ? null : _entrarConGoogle,
       style: AppDecor.botonSecundario(),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          icono,
-          const SizedBox(width: 8),
+        children: const [
           Text(
-            texto,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            'G',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF4285F4),
+            ),
+          ),
+          SizedBox(width: 10),
+          Text(
+            'Continuar con Google',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _entrarConGoogle() async {
+    setState(() => _cargando = true);
+    final auth = context.read<AuthProvider>();
+    final error = await auth.iniciarConGoogle();
+    if (!mounted) return;
+    setState(() => _cargando = false);
+    if (error != null) {
+      mostrarMensaje(context, error, error: true);
+      return;
+    }
+    if (auth.necesitaElegirRol) await _elegirRolGoogle(auth);
+  }
+
+  /// Primera vez con Google: ¿estudiante o tutor? (El rol de administrador
+  /// no se puede elegir desde la app.)
+  Future<void> _elegirRolGoogle(AuthProvider auth) async {
+    final rol = await showModalBottomSheet<Rol>(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      backgroundColor: AppColors.fondo,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.pantalla),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text('¡Bienvenido a StudyPlan!', style: AppText.tituloSeccion),
+              const SizedBox(height: 6),
+              const Text('¿Cómo vas a usar la app?', style: AppText.cuerpo),
+              const SizedBox(height: 20),
+              for (final r in const [Rol.estudiante, Rol.tutor]) ...[
+                OutlinedButton(
+                  onPressed: () => Navigator.of(ctx).pop(r),
+                  style: AppDecor.botonSecundario(),
+                  child: Column(
+                    children: [
+                      Text(
+                        r.etiqueta,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        r.descripcion,
+                        textAlign: TextAlign.center,
+                        style: AppText.pequeno,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text(
+                  'Cancelar',
+                  style: TextStyle(color: AppColors.textoSuave),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (!mounted) return;
+    if (rol == null) {
+      await auth.cancelarRegistroGoogle();
+      return;
+    }
+    setState(() => _cargando = true);
+    final error = await auth.completarRegistroGoogle(rol);
+    if (!mounted) return;
+    setState(() => _cargando = false);
+    if (error != null) mostrarMensaje(context, error, error: true);
   }
 
   Widget _pie() {
