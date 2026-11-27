@@ -94,7 +94,7 @@ class _EstudianteHomeState extends State<EstudianteHome> {
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.check_circle_outline),
-              label: 'Completadas',
+              label: 'Hechas',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.emoji_events_outlined),

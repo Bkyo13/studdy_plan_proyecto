@@ -9,11 +9,23 @@ import '../../providers/auth_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/boton_circular.dart';
 
 /// Pestaña "Asistente": chat con la IA, que conoce las tareas pendientes del
 /// estudiante.
 class AsistenteScreen extends StatefulWidget {
-  const AsistenteScreen({super.key});
+  /// Si se pasa, se empieza una conversación nueva con esta pregunta
+  /// (por ejemplo, desde el botón "Pedir ayuda a la IA" de una tarea).
+  final String? preguntaInicial;
+
+  /// Muestra la flecha para regresar (cuando se abre encima de otra pantalla).
+  final bool mostrarRegresar;
+
+  const AsistenteScreen({
+    super.key,
+    this.preguntaInicial,
+    this.mostrarRegresar = false,
+  });
 
   @override
   State<AsistenteScreen> createState() => _AsistenteScreenState();
@@ -29,6 +41,21 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
 
   final _textoCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    final pregunta = widget.preguntaInicial;
+    if (pregunta != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final asistente = context.read<AsistenteProvider>();
+        if (asistente.escribiendo) return;
+        asistente.limpiar();
+        _enviar(pregunta);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -84,6 +111,13 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
             ),
             child: Row(
               children: [
+                if (widget.mostrarRegresar) ...[
+                  BotonCircular(
+                    icono: Icons.arrow_back_ios_new,
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 const Expanded(
                   child: Text('Asistente', style: AppText.tituloPantalla),
                 ),

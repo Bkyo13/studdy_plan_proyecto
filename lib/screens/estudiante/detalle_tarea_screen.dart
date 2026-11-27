@@ -11,6 +11,7 @@ import '../../utils/formato_fecha.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/etiqueta_prioridad.dart';
+import 'asistente_screen.dart';
 import 'nueva_tarea_screen.dart';
 
 /// Detalle de una tarea: instrucciones, fecha, y acciones de completar/eliminar.
@@ -122,6 +123,23 @@ class DetalleTareaScreen extends StatelessWidget {
       onAccion: () => tareas.reabrir(tarea.id),
     );
     Navigator.of(context).pop();
+  }
+
+  /// Abre el asistente con una conversación nueva enfocada en esta tarea.
+  void _pedirAyuda(BuildContext context, Tarea tarea, String? materia) {
+    final deMateria = materia == null ? '' : ' de $materia';
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: AsistenteScreen(
+            mostrarRegresar: true,
+            preguntaInicial:
+                'Ayúdame con mi tarea "${tarea.nombre}"$deMateria. '
+                '¿Cómo la divido en pasos y por dónde empiezo?',
+          ),
+        ),
+      ),
+    );
   }
 
   void _reabrir(BuildContext context, Tarea tarea) {
@@ -302,6 +320,16 @@ class DetalleTareaScreen extends StatelessWidget {
                     style: AppDecor.botonPrimario(),
                     icon: const Icon(Icons.check_circle_outline),
                     label: const Text('Marcar como completada', style: AppText.boton),
+                  ),
+                  const SizedBox(height: 12),
+                  OutlinedButton.icon(
+                    onPressed: () => _pedirAyuda(context, tarea, materia?.nombre),
+                    style: AppDecor.botonSecundario(),
+                    icon: const Icon(Icons.auto_awesome_outlined),
+                    label: const Text(
+                      'Pedir ayuda a la IA',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                    ),
                   ),
                   const SizedBox(height: 12),
                 ] else ...[
