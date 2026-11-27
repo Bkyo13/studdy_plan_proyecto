@@ -48,6 +48,27 @@ class StudyPlanApp extends StatelessWidget {
           useMaterial3: true,
           scaffoldBackgroundColor: AppColors.fondo,
           colorScheme: ColorScheme.fromSeed(seedColor: AppColors.verde),
+          // Barra inferior: ícono y texto verdes en la pestaña activa.
+          navigationBarTheme: NavigationBarThemeData(
+            iconTheme: WidgetStateProperty.resolveWith(
+              (estados) => IconThemeData(
+                color: estados.contains(WidgetState.selected)
+                    ? AppColors.verde
+                    : AppColors.textoSuave,
+              ),
+            ),
+            labelTextStyle: WidgetStateProperty.resolveWith(
+              (estados) => TextStyle(
+                fontSize: 12,
+                fontWeight: estados.contains(WidgetState.selected)
+                    ? FontWeight.w700
+                    : FontWeight.w500,
+                color: estados.contains(WidgetState.selected)
+                    ? AppColors.verde
+                    : AppColors.textoSuave,
+              ),
+            ),
+          ),
         ),
         home: const SplashScreen(),
       ),

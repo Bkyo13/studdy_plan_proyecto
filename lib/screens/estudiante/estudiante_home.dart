@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../services/notificaciones_service.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/animaciones.dart';
 import 'asistente_screen.dart';
 import 'calendario_screen.dart';
 import 'completadas_screen.dart';
@@ -44,18 +46,68 @@ class _EstudianteHomeState extends State<EstudianteHome> {
     await NotificacionesService.instancia.pedirPermiso();
   }
 
+  static const _destinos = [
+    NavigationDestination(
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home_rounded),
+      label: 'Inicio',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.calendar_month_outlined),
+      selectedIcon: Icon(Icons.calendar_month_rounded),
+      label: 'Calendario',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.check_circle_outline),
+      selectedIcon: Icon(Icons.check_circle_rounded),
+      label: 'Hechas',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.emoji_events_outlined),
+      selectedIcon: Icon(Icons.emoji_events_rounded),
+      label: 'Logros',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.chat_bubble_outline_rounded),
+      selectedIcon: Icon(Icons.chat_bubble_rounded),
+      label: 'Asistente',
+    ),
+  ];
+
   @override
   Widget build(BuildContext context) {
+    final pestanas = [
+      const InicioScreen(),
+      const CalendarioScreen(),
+      const CompletadasScreen(),
+      // Se crea cada vez que se abre la pestaña, para revisar logros nuevos.
+      if (_indice == 3) const LogrosScreen() else const SizedBox.shrink(),
+      const AsistenteScreen(),
+    ];
+    final duracion = Animaciones.duracion(context, Animaciones.normal);
+
     return Scaffold(
-      body: IndexedStack(
-        index: _indice,
+      // Todas las pestañas siguen vivas (no pierden su scroll ni lo escrito);
+      // la visible aparece con un fundido corto y la anterior se desvanece.
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          const InicioScreen(),
-          const CalendarioScreen(),
-          const CompletadasScreen(),
-          // Se crea cada vez que se abre la pestaña, para revisar logros nuevos.
-          if (_indice == 3) const LogrosScreen() else const SizedBox.shrink(),
-          const AsistenteScreen(),
+          for (var i = 0; i < pestanas.length; i++)
+            IgnorePointer(
+              ignoring: i != _indice,
+              child: ExcludeSemantics(
+                excluding: i != _indice,
+                child: TickerMode(
+                  enabled: i == _indice,
+                  child: AnimatedOpacity(
+                    opacity: i == _indice ? 1 : 0,
+                    duration: duracion,
+                    curve: Animaciones.curva,
+                    child: pestanas[i],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
       floatingActionButton: _indice == 0
@@ -70,41 +122,25 @@ class _EstudianteHomeState extends State<EstudianteHome> {
               child: const Icon(Icons.add),
             )
           : null,
-      bottomNavigationBar: Container(
+      bottomNavigationBar: DecoratedBox(
         decoration: const BoxDecoration(
-          color: Colors.white,
           border: Border(top: BorderSide(color: AppColors.borde)),
         ),
-        child: BottomNavigationBar(
-          currentIndex: _indice,
-          onTap: (i) => setState(() => _indice = i),
-          type: BottomNavigationBarType.fixed,
+        child: NavigationBar(
+          selectedIndex: _indice,
+          onDestinationSelected: (i) {
+            if (i == _indice) return;
+            HapticFeedback.selectionClick();
+            setState(() => _indice = i);
+          },
+          animationDuration: duracion,
+          height: 68,
           backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
           elevation: 0,
-          selectedItemColor: AppColors.verde,
-          unselectedItemColor: AppColors.textoSuave,
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.home_outlined),
-              label: 'Inicio',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.calendar_month_outlined),
-              label: 'Calendario',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.check_circle_outline),
-              label: 'Hechas',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.emoji_events_outlined),
-              label: 'Logros',
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.auto_awesome_outlined),
-              label: 'Asistente',
-            ),
-          ],
+          indicatorColor: AppColors.verdeClaro,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: _destinos,
         ),
       ),
     );
