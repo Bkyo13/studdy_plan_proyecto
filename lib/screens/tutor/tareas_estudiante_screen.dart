@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_tarea.dart';
+import '../../widgets/tarjeta_esqueleto.dart';
 import '../estudiante/detalle_tarea_screen.dart';
 
 /// Lista de tareas del estudiante vinculado. Solo lectura, con filtro.
@@ -70,7 +71,9 @@ class _TareasEstudianteScreenState extends State<TareasEstudianteScreen> {
               ),
               const SizedBox(height: AppSpacing.entreSecciones),
               Expanded(
-                child: tareas.isEmpty
+                child: context.read<TareaProvider>().cargando
+                    ? const SingleChildScrollView(child: ListaEsqueleto())
+                    : tareas.isEmpty
                     ? Align(
                         alignment: Alignment.topCenter,
                         child: EstadoVacio(

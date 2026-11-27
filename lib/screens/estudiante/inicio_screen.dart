@@ -13,6 +13,7 @@ import '../../utils/mensajes.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/insignia_xp.dart';
 import '../../widgets/tarjeta_deslizable.dart';
+import '../../widgets/tarjeta_esqueleto.dart';
 import 'detalle_tarea_screen.dart';
 import 'perfil_screen.dart';
 
@@ -165,7 +166,9 @@ class _InicioScreenState extends State<InicioScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          if (pendientes.isEmpty)
+          if (tareas.cargando)
+            const ListaEsqueleto()
+          else if (pendientes.isEmpty)
             const EstadoVacio(
               titulo: 'No hay tareas pendientes',
               mensaje: 'Toca el botón + para agregar tu primera tarea.',

@@ -9,6 +9,7 @@ import '../../providers/vinculo_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/mensajes.dart';
 import '../../widgets/boton_circular.dart';
+import '../../widgets/tarjeta_esqueleto.dart';
 import '../estudiante/perfil_screen.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_dato.dart';
@@ -119,12 +120,7 @@ class TutorHome extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.entreSecciones),
               if (cargando)
-                const Padding(
-                  padding: EdgeInsets.only(top: 80),
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppColors.verde),
-                  ),
-                )
+                const ListaEsqueleto(cantidad: 2, alto: 96)
               else if (estudiante == null) ...[
                 const EstadoVacio(
                   icono: Icons.person_add_alt_1_outlined,

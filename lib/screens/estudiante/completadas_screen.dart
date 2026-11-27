@@ -9,6 +9,7 @@ import '../../theme/app_theme.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/insignia_xp.dart';
 import '../../widgets/tarjeta_tarea.dart';
+import '../../widgets/tarjeta_esqueleto.dart';
 import 'detalle_tarea_screen.dart';
 
 /// Pestaña Completadas: historial, XP y banner de progreso (lista secundaria).
@@ -57,7 +58,9 @@ class CompletadasScreen extends StatelessWidget {
             _bannerProgreso(enLaSemana),
             const SizedBox(height: AppSpacing.entreSecciones),
           ],
-          if (completadas.isEmpty)
+          if (tareasProvider.cargando)
+            const ListaEsqueleto()
+          else if (completadas.isEmpty)
             const EstadoVacio(
               icono: Icons.check_circle_outline,
               titulo: 'Aún no has completado tareas',

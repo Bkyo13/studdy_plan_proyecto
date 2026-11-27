@@ -12,6 +12,7 @@ import '../../widgets/aviso_feriado.dart';
 import '../../widgets/boton_circular.dart';
 import '../../widgets/estado_vacio.dart';
 import '../../widgets/tarjeta_tarea.dart';
+import '../../widgets/tarjeta_esqueleto.dart';
 import 'detalle_tarea_screen.dart';
 
 /// Pestaña Calendario: vista del mes con puntitos en los días que tienen
@@ -121,7 +122,9 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             AvisoFeriado(nombreFeriado: nombre),
             const SizedBox(height: 12),
           ],
-          if (delDia.isEmpty)
+          if (context.read<TareaProvider>().cargando)
+            const ListaEsqueleto(cantidad: 2)
+          else if (delDia.isEmpty)
             const EstadoVacio(
               icono: Icons.event_available_outlined,
               titulo: 'Sin entregas este día',
