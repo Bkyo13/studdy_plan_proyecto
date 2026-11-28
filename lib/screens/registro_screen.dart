@@ -6,6 +6,7 @@ import '../models/usuario.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/mensajes.dart';
+import '../utils/teclado.dart';
 import '../utils/validadores.dart';
 import '../widgets/boton_circular.dart';
 import '../widgets/logo_app.dart';
@@ -41,6 +42,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   }
 
   Future<void> _crearCuenta() async {
+    ocultarTeclado();
     if (_cargando || !_formKey.currentState!.validate()) return;
     setState(() => _cargando = true);
     final error = await context.read<AuthProvider>().registrar(

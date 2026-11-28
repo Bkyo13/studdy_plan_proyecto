@@ -6,8 +6,9 @@ import '../../models/logro.dart';
 import '../../providers/logro_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/mensajes.dart';
-import '../../widgets/boton_circular.dart';
+import '../../utils/teclado.dart';
 import '../../utils/validadores.dart';
+import '../../widgets/boton_circular.dart';
 
 /// Formulario del Administrador: crea un logro o edita uno existente.
 class LogroFormScreen extends StatefulWidget {
@@ -46,6 +47,7 @@ class _LogroFormScreenState extends State<LogroFormScreen> {
   }
 
   void _guardar() {
+    ocultarTeclado();
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<LogroProvider>();
     final xp = int.parse(_xpCtrl.text.trim());

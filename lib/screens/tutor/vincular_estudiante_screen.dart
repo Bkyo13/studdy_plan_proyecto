@@ -5,6 +5,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/vinculo_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/mensajes.dart';
+import '../../utils/teclado.dart';
 import '../../utils/validadores.dart';
 import '../../widgets/boton_circular.dart';
 
@@ -29,6 +30,7 @@ class _VincularEstudianteScreenState extends State<VincularEstudianteScreen> {
   }
 
   void _vincular() {
+    ocultarTeclado();
     if (!_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     final tutor = auth.usuarioActual;

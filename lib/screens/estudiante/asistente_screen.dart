@@ -9,6 +9,7 @@ import '../../providers/auth_provider.dart';
 import '../../providers/materia_provider.dart';
 import '../../providers/tarea_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/teclado.dart';
 import '../../widgets/boton_circular.dart';
 
 /// Pestaña "Asistente": chat con la IA, que conoce las tareas pendientes del
@@ -65,6 +66,7 @@ class _AsistenteScreenState extends State<AsistenteScreen> {
   }
 
   Future<void> _enviar(String texto) async {
+    ocultarTeclado();
     final usuario = context.read<AuthProvider>().usuarioActual;
     if (usuario == null || texto.trim().isEmpty) return;
     final materias = context.read<MateriaProvider>();

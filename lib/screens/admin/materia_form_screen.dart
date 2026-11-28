@@ -7,8 +7,9 @@ import '../../providers/materia_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/color_hex.dart';
 import '../../utils/mensajes.dart';
-import '../../widgets/boton_circular.dart';
+import '../../utils/teclado.dart';
 import '../../utils/validadores.dart';
+import '../../widgets/boton_circular.dart';
 
 /// Formulario del Administrador: crea una materia nueva o edita una existente.
 class MateriaFormScreen extends StatefulWidget {
@@ -61,6 +62,7 @@ class _MateriaFormScreenState extends State<MateriaFormScreen> {
   }
 
   void _guardar() {
+    ocultarTeclado();
     if (!_formKey.currentState!.validate()) return;
     final provider = context.read<MateriaProvider>();
     final error = _editando

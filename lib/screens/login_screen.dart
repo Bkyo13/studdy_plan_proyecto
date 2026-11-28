@@ -5,6 +5,7 @@ import '../models/usuario.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/mensajes.dart';
+import '../utils/teclado.dart';
 import '../utils/validadores.dart';
 import '../widgets/logo_app.dart';
 import 'recuperar_contrasena_screen.dart';
@@ -33,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _iniciarSesion() async {
+    ocultarTeclado();
     if (_cargando || !_formKey.currentState!.validate()) return;
     setState(() => _cargando = true);
     final error = await context.read<AuthProvider>().iniciarSesion(

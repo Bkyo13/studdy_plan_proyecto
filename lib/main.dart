@@ -13,6 +13,7 @@ import 'providers/vinculo_provider.dart';
 import 'screens/splash_screen.dart';
 import 'services/notificaciones_service.dart';
 import 'theme/app_theme.dart';
+import 'utils/teclado.dart';
 
 /// Antes de dibujar la app se conecta con Firebase (proyecto StudyPlan).
 /// `firebase_options.dart` lo generó `flutterfire configure` con los datos de
@@ -50,6 +51,9 @@ class StudyPlanApp extends StatelessWidget {
       child: MaterialApp(
         title: 'StudyPlan',
         debugShowCheckedModeBanner: false,
+        // Tocar fuera de un campo baja el teclado en toda la app.
+        builder: (context, child) =>
+            CerrarTecladoAlTocar(child: child ?? const SizedBox.shrink()),
         theme: ThemeData(
           useMaterial3: true,
           scaffoldBackgroundColor: AppColors.fondo,

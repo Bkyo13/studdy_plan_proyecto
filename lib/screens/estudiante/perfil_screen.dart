@@ -11,6 +11,7 @@ import '../../services/notificaciones_service.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/cerrar_sesion.dart';
 import '../../utils/mensajes.dart';
+import '../../utils/teclado.dart';
 import '../../utils/validadores.dart';
 import '../../widgets/boton_circular.dart';
 
@@ -59,6 +60,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
       _confirmarCtrl.text.isNotEmpty;
 
   Future<void> _guardar() async {
+    ocultarTeclado();
     if (_guardando || !_formKey.currentState!.validate()) return;
     final auth = context.read<AuthProvider>();
     final usuario = auth.usuarioActual;
