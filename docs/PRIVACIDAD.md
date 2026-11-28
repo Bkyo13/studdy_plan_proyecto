@@ -1,6 +1,6 @@
 # Política de privacidad de StudyPlan
 
-**Última actualización:** 27 de noviembre de 2026
+**Última actualización:** 27 de noviembre de 2026 (revisión 2)
 
 StudyPlan es un proyecto escolar de TSU en la Universidad Tecnológica del Norte de Guanajuato (UTNG), hecho por Diego Hernández y Kinberly. Aquí explicamos qué datos usa la app, para qué y qué puedes hacer con ellos.
 
@@ -31,7 +31,6 @@ Lo que le escribes al asistente se envía a **Gemini** (Google), a través de Fi
 
 - **Feriados:** la app consulta la API pública Nager.Date para saber los días feriados de México. Solo se pide el año; no se envía ningún dato tuyo.
 - **Recordatorios:** se programan en tu propio teléfono (notificaciones locales). No pasan por ningún servidor.
-- **Firebase App Check:** verifica que las peticiones vengan de la app original, para evitar abusos.
 
 ## 5. Lo que NO hacemos
 
